@@ -1,20 +1,18 @@
-import {
-	select, put, call, take, takeLatest
-} from 'redux-saga/effects';
+import { call, put, select, take, takeLatest } from 'redux-saga/effects';
 import { sanitizedRaw } from '@nozbe/watermelondb/RawRecord';
 
 import { CREATE_DISCUSSION, LOGIN } from '../actions/actionsTypes';
-import { createDiscussionSuccess, createDiscussionFailure } from '../actions/createDiscussion';
+import { createDiscussionFailure, createDiscussionSuccess } from '../actions/createDiscussion';
 import RocketChat from '../lib/rocketchat';
 import database from '../lib/database';
-import { logEvent, events } from '../utils/log';
+import { events, logEvent } from '../utils/log';
 
 const create = function* create(data) {
 	return yield RocketChat.createDiscussion(data);
 };
 
 const handleRequest = function* handleRequest({ data }) {
-	logEvent(events.CREATE_DISCUSSION_CREATE);
+	logEvent(events.CD_CREATE);
 	try {
 		const auth = yield select(state => state.login.isAuthenticated);
 		if (!auth) {
@@ -27,9 +25,9 @@ const handleRequest = function* handleRequest({ data }) {
 
 			try {
 				const db = database.active;
-				const subCollection = db.collections.get('subscriptions');
-				yield db.action(async() => {
-					await subCollection.create((s) => {
+				const subCollection = db.get('subscriptions');
+				yield db.action(async () => {
+					await subCollection.create(s => {
 						s._raw = sanitizedRaw({ id: sub.rid }, subCollection.schema);
 						Object.assign(s, sub);
 					});
@@ -39,11 +37,11 @@ const handleRequest = function* handleRequest({ data }) {
 			}
 			yield put(createDiscussionSuccess(sub));
 		} else {
-			logEvent(events.CREATE_DISCUSSION_CREATE_F);
+			logEvent(events.CD_CREATE_F);
 			yield put(createDiscussionFailure(result));
 		}
 	} catch (err) {
-		logEvent(events.CREATE_DISCUSSION_CREATE_F);
+		logEvent(events.CD_CREATE_F);
 		yield put(createDiscussionFailure(err));
 	}
 };

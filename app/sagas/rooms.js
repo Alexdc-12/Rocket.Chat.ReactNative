@@ -1,26 +1,25 @@
-import {
-	put, select, race, take, fork, cancel, delay
-} from 'redux-saga/effects';
+import { cancel, delay, fork, put, race, select, take } from 'redux-saga/effects';
 import { Q } from '@nozbe/watermelondb';
 import { sanitizedRaw } from '@nozbe/watermelondb/RawRecord';
 
 import * as types from '../actions/actionsTypes';
-import { roomsSuccess, roomsFailure, roomsRefresh } from '../actions/rooms';
+import { roomsFailure, roomsRefresh, roomsSuccess } from '../actions/rooms';
 import database from '../lib/database';
 import log from '../utils/log';
 import mergeSubscriptionsRooms from '../lib/methods/helpers/mergeSubscriptionsRooms';
 import RocketChat from '../lib/rocketchat';
 import buildMessage from '../lib/methods/helpers/buildMessage';
 import protectedFunction from '../lib/methods/helpers/protectedFunction';
+import UserPreferences from '../lib/userPreferences';
 
 const updateRooms = function* updateRooms({ server, newRoomsUpdatedAt }) {
 	const serversDB = database.servers;
-	const serversCollection = serversDB.collections.get('servers');
+	const serversCollection = serversDB.get('servers');
 	try {
 		const serverRecord = yield serversCollection.find(server);
 
-		return serversDB.action(async() => {
-			await serverRecord.update((record) => {
+		return serversDB.action(async () => {
+			await serverRecord.update(record => {
 				record.roomsUpdatedAt = newRoomsUpdatedAt;
 			});
 		});
@@ -39,7 +38,7 @@ const handleRoomsRequest = function* handleRoomsRequest({ params }) {
 		if (params.allData) {
 			yield put(roomsRefresh());
 		} else {
-			const serversCollection = serversDB.collections.get('servers');
+			const serversCollection = serversDB.get('servers');
 			try {
 				const serverRecord = yield serversCollection.find(server);
 				({ roomsUpdatedAt } = serverRecord);
@@ -47,12 +46,22 @@ const handleRoomsRequest = function* handleRoomsRequest({ params }) {
 				// Server not found
 			}
 		}
+
+		// Force fetch all subscriptions to update columns related to Teams feature
+		// TODO: remove it a couple of releases
+		const teamsMigrationKey = `${server}_TEAMS_MIGRATION`;
+		const teamsMigration = yield UserPreferences.getBoolAsync(teamsMigrationKey);
+		if (!teamsMigration) {
+			roomsUpdatedAt = null;
+			UserPreferences.setBoolAsync(teamsMigrationKey, true);
+		}
+
 		const [subscriptionsResult, roomsResult] = yield RocketChat.getRooms(roomsUpdatedAt);
 		const { subscriptions } = yield mergeSubscriptionsRooms(subscriptionsResult, roomsResult);
 
 		const db = database.active;
-		const subCollection = db.collections.get('subscriptions');
-		const messagesCollection = db.collections.get('messages');
+		const subCollection = db.get('subscriptions');
+		const messagesCollection = db.get('messages');
 
 		const subsIds = subscriptions.map(sub => sub.rid).concat(roomsResult.remove.map(room => room._id));
 		if (subsIds.length) {
@@ -76,11 +85,13 @@ const handleRoomsRequest = function* handleRoomsRequest({ params }) {
 			const messagesToCreate = lastMessages.filter(i1 => !existingMessages.find(i2 => i1._id === i2.id));
 
 			const allRecords = [
-				...subsToCreate.map(subscription => subCollection.prepareCreate((s) => {
-					s._raw = sanitizedRaw({ id: subscription.rid }, subCollection.schema);
-					return Object.assign(s, subscription);
-				})),
-				...subsToUpdate.map((subscription) => {
+				...subsToCreate.map(subscription =>
+					subCollection.prepareCreate(s => {
+						s._raw = sanitizedRaw({ id: subscription.rid }, subCollection.schema);
+						return Object.assign(s, subscription);
+					})
+				),
+				...subsToUpdate.map(subscription => {
 					const newSub = subscriptions.find(s => s._id === subscription._id);
 					return subscription.prepareUpdate(() => {
 						if (newSub.announcement) {
@@ -92,20 +103,26 @@ const handleRoomsRequest = function* handleRoomsRequest({ params }) {
 					});
 				}),
 				...subsToDelete.map(subscription => subscription.prepareDestroyPermanently()),
-				...messagesToCreate.map(message => messagesCollection.prepareCreate(protectedFunction((m) => {
-					m._raw = sanitizedRaw({ id: message._id }, messagesCollection.schema);
-					m.subscription.id = message.rid;
-					return Object.assign(m, message);
-				}))),
-				...messagesToUpdate.map((message) => {
+				...messagesToCreate.map(message =>
+					messagesCollection.prepareCreate(
+						protectedFunction(m => {
+							m._raw = sanitizedRaw({ id: message._id }, messagesCollection.schema);
+							m.subscription.id = message.rid;
+							return Object.assign(m, message);
+						})
+					)
+				),
+				...messagesToUpdate.map(message => {
 					const newMessage = lastMessages.find(m => m._id === message.id);
-					return message.prepareUpdate(protectedFunction(() => {
-						Object.assign(message, newMessage);
-					}));
+					return message.prepareUpdate(
+						protectedFunction(() => {
+							Object.assign(message, newMessage);
+						})
+					);
 				})
 			];
 
-			yield db.action(async() => {
+			yield db.action(async () => {
 				await db.batch(...allRecords);
 			});
 		}

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-	version: 12,
+	version: 14,
 	tables: [
 		tableSchema({
 			name: 'subscriptions',
@@ -57,7 +57,9 @@ export default appSchema({
 				{ name: 'e2e_key', type: 'string', isOptional: true },
 				{ name: 'encrypted', type: 'boolean', isOptional: true },
 				{ name: 'e2e_key_id', type: 'string', isOptional: true },
-				{ name: 'avatar_etag', type: 'string', isOptional: true }
+				{ name: 'avatar_etag', type: 'string', isOptional: true },
+				{ name: 'team_id', type: 'string', isIndexed: true },
+				{ name: 'team_main', type: 'boolean', isOptional: true } // Use `Q.notEq(true)` to get false or null
 			]
 		}),
 		tableSchema({
@@ -113,7 +115,8 @@ export default appSchema({
 				{ name: 'tmsg', type: 'string', isOptional: true },
 				{ name: 'blocks', type: 'string', isOptional: true },
 				{ name: 'e2e', type: 'string', isOptional: true },
-				{ name: 'tshow', type: 'boolean', isOptional: true }
+				{ name: 'tshow', type: 'boolean', isOptional: true },
+				{ name: 'md', type: 'string', isOptional: true }
 			]
 		}),
 		tableSchema({
@@ -234,9 +237,7 @@ export default appSchema({
 		}),
 		tableSchema({
 			name: 'roles',
-			columns: [
-				{ name: 'description', type: 'string', isOptional: true }
-			]
+			columns: [{ name: 'description', type: 'string', isOptional: true }]
 		}),
 		tableSchema({
 			name: 'permissions',

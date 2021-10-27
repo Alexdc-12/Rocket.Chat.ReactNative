@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+
 import sharedStyles from '../Styles';
 
 export default StyleSheet.create({
@@ -7,9 +8,14 @@ export default StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center'
 	},
+	emptyText: {
+		fontSize: 16,
+		...sharedStyles.textRegular
+	},
 	item: {
 		flex: 1,
 		flexDirection: 'row',
+		alignItems: 'center',
 		justifyContent: 'space-between'
 	},
 	separator: {
@@ -18,6 +24,14 @@ export default StyleSheet.create({
 	name: {
 		...sharedStyles.textRegular,
 		fontSize: 17
+	},
+	username: {
+		...sharedStyles.textMedium,
+		fontSize: 14
+	},
+	time: {
+		...sharedStyles.textRegular,
+		fontSize: 12
 	},
 	infoContainer: {
 		flex: 1,

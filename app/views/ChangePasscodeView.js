@@ -3,12 +3,12 @@ import { StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
 import Orientation from 'react-native-orientation-locker';
 import useDeepCompareEffect from 'use-deep-compare-effect';
-import _ from 'lodash';
+import isEmpty from 'lodash/isEmpty';
 import Modal from 'react-native-modal';
 import Touchable from 'react-native-platform-touchable';
 
 import { withTheme } from '../theme';
-import { isTablet, hasNotch } from '../utils/deviceInfo';
+import { hasNotch, isTablet } from '../utils/deviceInfo';
 import { TYPE } from '../containers/Passcode/constants';
 import { PasscodeChoose } from '../containers/Passcode';
 import EventEmitter from '../utils/events';
@@ -32,18 +32,18 @@ const ChangePasscodeView = React.memo(({ theme }) => {
 	const [data, setData] = useState({});
 
 	useDeepCompareEffect(() => {
-		if (!_.isEmpty(data)) {
+		if (!isEmpty(data)) {
 			setVisible(true);
 		} else {
 			setVisible(false);
 		}
 	}, [data]);
 
-	const showChangePasscode = (args) => {
+	const showChangePasscode = args => {
 		setData(args);
 	};
 
-	const onSubmit = (passcode) => {
+	const onSubmit = passcode => {
 		const { submit } = data;
 		if (submit) {
 			submit(passcode);
@@ -63,30 +63,23 @@ const ChangePasscodeView = React.memo(({ theme }) => {
 		if (!isTablet) {
 			Orientation.lockToPortrait();
 		}
-		EventEmitter.addEventListener(CHANGE_PASSCODE_EMITTER, showChangePasscode);
-		return (() => {
+		const listener = EventEmitter.addEventListener(CHANGE_PASSCODE_EMITTER, showChangePasscode);
+		return () => {
 			if (!isTablet) {
 				Orientation.unlockAllOrientations();
 			}
-			EventEmitter.removeListener(CHANGE_PASSCODE_EMITTER);
-		});
+			EventEmitter.removeListener(CHANGE_PASSCODE_EMITTER, listener);
+		};
 	}, []);
 
 	return (
-		<Modal
-			useNativeDriver
-			isVisible={visible}
-			hideModalContentWhileAnimating
-			style={styles.modal}
-		>
+		<Modal useNativeDriver isVisible={visible} hideModalContentWhileAnimating style={styles.modal}>
 			<PasscodeChoose theme={theme} type={TYPE.choose} finishProcess={onSubmit} force={data?.force} />
-			{!data?.force
-				? (
-					<Touchable onPress={onCancel} style={styles.close}>
-						<CustomIcon name='close' color={themes[theme].passcodePrimary} size={30} />
-					</Touchable>
-				)
-				: null}
+			{!data?.force ? (
+				<Touchable onPress={onCancel} style={styles.close}>
+					<CustomIcon name='close' color={themes[theme].passcodePrimary} size={30} />
+				</Touchable>
+			) : null}
 		</Modal>
 	);
 });

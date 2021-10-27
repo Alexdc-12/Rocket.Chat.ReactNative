@@ -7,20 +7,16 @@ import { BASIC_AUTH_KEY } from '../../utils/fetch';
 import database, { getDatabase } from '../database';
 import RocketChat from '../rocketchat';
 import { useSsl } from '../../utils/url';
-import {
-	E2E_PUBLIC_KEY,
-	E2E_PRIVATE_KEY,
-	E2E_RANDOM_PASSWORD_KEY
-} from '../encryption/constants';
+import { E2E_PRIVATE_KEY, E2E_PUBLIC_KEY, E2E_RANDOM_PASSWORD_KEY } from '../encryption/constants';
 import UserPreferences from '../userPreferences';
 
 async function removeServerKeys({ server, userId }) {
-	await UserPreferences.removeItem(`${ RocketChat.TOKEN_KEY }-${ server }`);
-	await UserPreferences.removeItem(`${ RocketChat.TOKEN_KEY }-${ userId }`);
-	await UserPreferences.removeItem(`${ BASIC_AUTH_KEY }-${ server }`);
-	await UserPreferences.removeItem(`${ server }-${ E2E_PUBLIC_KEY }`);
-	await UserPreferences.removeItem(`${ server }-${ E2E_PRIVATE_KEY }`);
-	await UserPreferences.removeItem(`${ server }-${ E2E_RANDOM_PASSWORD_KEY }`);
+	await UserPreferences.removeItem(`${RocketChat.TOKEN_KEY}-${server}`);
+	await UserPreferences.removeItem(`${RocketChat.TOKEN_KEY}-${userId}`);
+	await UserPreferences.removeItem(`${BASIC_AUTH_KEY}-${server}`);
+	await UserPreferences.removeItem(`${server}-${E2E_PUBLIC_KEY}`);
+	await UserPreferences.removeItem(`${server}-${E2E_PRIVATE_KEY}`);
+	await UserPreferences.removeItem(`${server}-${E2E_RANDOM_PASSWORD_KEY}`);
 }
 
 async function removeSharedCredentials({ server }) {
@@ -40,14 +36,14 @@ async function removeServerData({ server }) {
 	try {
 		const batch = [];
 		const serversDB = database.servers;
-		const userId = await UserPreferences.getStringAsync(`${ RocketChat.TOKEN_KEY }-${ server }`);
+		const userId = await UserPreferences.getStringAsync(`${RocketChat.TOKEN_KEY}-${server}`);
 
-		const usersCollection = serversDB.collections.get('users');
+		const usersCollection = serversDB.get('users');
 		if (userId) {
 			const userRecord = await usersCollection.find(userId);
 			batch.push(userRecord.prepareDestroyPermanently());
 		}
-		const serverCollection = serversDB.collections.get('servers');
+		const serverCollection = serversDB.get('servers');
 		const serverRecord = await serverCollection.find(server);
 		batch.push(serverRecord.prepareDestroyPermanently());
 
@@ -61,7 +57,6 @@ async function removeServerData({ server }) {
 
 async function removeCurrentServer() {
 	await UserPreferences.removeItem(RocketChat.CURRENT_SERVER);
-	await UserPreferences.removeItem(RocketChat.TOKEN_KEY);
 }
 
 async function removeServerDatabase({ server }) {
@@ -75,9 +70,9 @@ async function removeServerDatabase({ server }) {
 
 export async function removeServer({ server }) {
 	try {
-		const userId = await UserPreferences.getStringAsync(`${ RocketChat.TOKEN_KEY }-${ server }`);
+		const userId = await UserPreferences.getStringAsync(`${RocketChat.TOKEN_KEY}-${server}`);
 		if (userId) {
-			const resume = await UserPreferences.getStringAsync(`${ RocketChat.TOKEN_KEY }-${ userId }`);
+			const resume = await UserPreferences.getStringAsync(`${RocketChat.TOKEN_KEY}-${userId}`);
 
 			const sdk = new RocketchatClient({ host: server, protocol: 'ddp', useSsl: useSsl(server) });
 			await sdk.login({ resume });

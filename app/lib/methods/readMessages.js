@@ -4,14 +4,14 @@ import log from '../../utils/log';
 export default async function readMessages(rid, ls, updateLastOpen = false) {
 	try {
 		const db = database.active;
-		const subscription = await db.collections.get('subscriptions').find(rid);
+		const subscription = await db.get('subscriptions').find(rid);
 
 		// RC 0.61.0
 		await this.sdk.post('subscriptions.read', { rid });
 
-		await db.action(async() => {
+		await db.action(async () => {
 			try {
-				await subscription.update((s) => {
+				await subscription.update(s => {
 					s.open = true;
 					s.alert = false;
 					s.unread = 0;

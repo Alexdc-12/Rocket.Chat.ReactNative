@@ -1,9 +1,8 @@
-import semver from 'semver';
-
+import { compareServerVersion, methods } from '../utils';
 import reduxStore from '../createStore';
 import database from '../database';
 import log from '../../utils/log';
-import { setEnterpriseModules as setEnterpriseModulesAction, clearEnterpriseModules } from '../../actions/enterpriseModules';
+import { clearEnterpriseModules, setEnterpriseModules as setEnterpriseModulesAction } from '../../actions/enterpriseModules';
 
 export const LICENSE_OMNICHANNEL_MOBILE_ENTERPRISE = 'omnichannel-mobile-enterprise';
 export const LICENSE_LIVECHAT_ENTERPRISE = 'livechat-enterprise';
@@ -12,7 +11,7 @@ export async function setEnterpriseModules() {
 	try {
 		const { server: serverId } = reduxStore.getState().server;
 		const serversDB = database.servers;
-		const serversCollection = serversDB.collections.get('servers');
+		const serversCollection = serversDB.get('servers');
 		let server;
 		try {
 			server = await serversCollection.find(serverId);
@@ -30,18 +29,18 @@ export async function setEnterpriseModules() {
 }
 
 export function getEnterpriseModules() {
-	return new Promise(async(resolve) => {
+	return new Promise(async resolve => {
 		try {
 			const { version: serverVersion, server: serverId } = reduxStore.getState().server;
-			if (serverVersion && semver.gte(semver.coerce(serverVersion), '3.1.0')) {
+			if (compareServerVersion(serverVersion, '3.1.0', methods.greaterThanOrEqualTo)) {
 				// RC 3.1.0
 				const enterpriseModules = await this.methodCallWrapper('license:getModules');
 				if (enterpriseModules) {
 					const serversDB = database.servers;
-					const serversCollection = serversDB.collections.get('servers');
+					const serversCollection = serversDB.get('servers');
 					const server = await serversCollection.find(serverId);
-					await serversDB.action(async() => {
-						await server.update((s) => {
+					await serversDB.action(async () => {
+						await server.update(s => {
 							s.enterpriseModules = enterpriseModules.join(',');
 						});
 					});

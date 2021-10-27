@@ -1,4 +1,4 @@
-import { takeLatest, select } from 'redux-saga/effects';
+import { select, takeLatest } from 'redux-saga/effects';
 import { Q } from '@nozbe/watermelondb';
 
 import Navigation from '../lib/Navigation';
@@ -12,7 +12,7 @@ const handleReplyBroadcast = function* handleReplyBroadcast({ message }) {
 	try {
 		const db = database.active;
 		const { username } = message.u;
-		const subsCollection = db.collections.get('subscriptions');
+		const subsCollection = db.get('subscriptions');
 		const subscriptions = yield subsCollection.query(Q.where('name', username)).fetch();
 
 		const isMasterDetail = yield select(state => state.app.isMasterDetail);
