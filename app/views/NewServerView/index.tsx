@@ -327,19 +327,7 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 		return (
 			<FormContainer testID='new-server-view' keyboardShouldPersistTaps='never'>
 				<FormContainerInner>
-					<Image
-						style={[
-							styles.onboardingImage,
-							{
-								marginBottom: verticalScale({ size: 10, height }),
-								marginTop: isTablet ? 0 : verticalScale({ size: marginTop, height }),
-								width: verticalScale({ size: 100, height }),
-								height: verticalScale({ size: 100, height })
-							}
-						]}
-						source={require('../../static/images/logo.png')}
-						fadeDuration={0}
-					/>
+					
 					<Text
 						style={[
 							styles.title,
@@ -350,7 +338,7 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 							}
 						]}
 					>
-						Rocket.Chat
+						Natter Chat
 					</Text>
 					<Text
 						style={[
@@ -362,7 +350,7 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 							}
 						]}
 					>
-						{I18n.t('Onboarding_subtitle')}
+						Chat Without Limits
 					</Text>
 					<ServerInput
 						text={text}
@@ -382,28 +370,7 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 						style={[styles.connectButton, { marginTop: verticalScale({ size: 16, height }) }]}
 						testID='new-server-view-button'
 					/>
-					<OrSeparator theme={theme} />
-					<Text
-						style={[
-							styles.description,
-							{
-								color: themes[theme].auxiliaryText,
-								fontSize: moderateScale({ size: 14, width }),
-								marginBottom: verticalScale({ size: 16, height })
-							}
-						]}
-					>
-						{I18n.t('Onboarding_join_open_description')}
-					</Text>
-					<Button
-						title={I18n.t('Join_our_open_workspace')}
-						type='secondary'
-						backgroundColor={themes[theme].chatComponentBackground}
-						onPress={this.connectOpen}
-						disabled={connecting}
-						loading={connectingOpen && connecting}
-						testID='new-server-view-open'
-					/>
+					
 				</FormContainerInner>
 				{this.renderCertificatePicker()}
 			</FormContainer>
