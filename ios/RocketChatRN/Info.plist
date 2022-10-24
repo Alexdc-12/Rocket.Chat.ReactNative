@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>AppGroup</key>
-	<string>group.ios.chat.natter</string>
+	<string>group.rocket.chat.natter</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -107,7 +107,7 @@
 	<key>bugsnag</key>
 	<dict>
 		<key>apiKey</key>
-		<string>apiKeyValue</string>
+		<string>0534aafff03d79a8cb9089e1d58b3e2f</string>
 	</dict>
 </dict>
 </plist>
