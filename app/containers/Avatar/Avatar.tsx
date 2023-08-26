@@ -29,7 +29,8 @@ const Avatar = React.memo(
 		size = 25,
 		borderRadius = 4,
 		type = SubscriptionType.DIRECT,
-		externalProviderUrl
+		avatarExternalProviderUrl,
+		roomAvatarExternalProviderUrl
 	}: IAvatar) => {
 		if ((!text && !avatar && !emoji && !rid) || !server) {
 			return null;
@@ -43,9 +44,7 @@ const Avatar = React.memo(
 
 		let image;
 		if (emoji) {
-			image = (
-				<Emoji baseUrl={server} getCustomEmoji={getCustomEmoji} isMessageContainsOnlyEmoji literal={emoji} style={avatarStyle} />
-			);
+			image = <Emoji getCustomEmoji={getCustomEmoji} isMessageContainsOnlyEmoji literal={emoji} style={avatarStyle} />;
 		} else {
 			let uri = avatar;
 			if (!isStatic) {
@@ -61,7 +60,8 @@ const Avatar = React.memo(
 					serverVersion,
 					rid,
 					blockUnauthenticatedAccess,
-					externalProviderUrl
+					avatarExternalProviderUrl,
+					roomAvatarExternalProviderUrl
 				});
 			}
 

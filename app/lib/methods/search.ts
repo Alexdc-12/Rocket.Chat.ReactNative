@@ -1,21 +1,39 @@
 import { Q } from '@nozbe/watermelondb';
 
-import { sanitizeLikeString } from '../database/utils';
+import { sanitizeLikeString, slugifyLikeString } from '../database/utils';
 import database from '../database/index';
+import { store as reduxStore } from '../store/auxStore';
 import { spotlight } from '../services/restApi';
-import { ISearch, ISearchLocal, SubscriptionType } from '../../definitions';
-import { isGroupChat } from './helpers';
+import { ISearch, ISearchLocal, IUserMessage, SubscriptionType, TSubscriptionModel } from '../../definitions';
+import { isGroupChat, isReadOnly } from './helpers';
+
+export type TSearch = ISearchLocal | IUserMessage | ISearch;
 
 let debounce: null | ((reason: string) => void) = null;
 
-export const localSearch = async ({ text = '', filterUsers = true, filterRooms = true }): Promise<ISearchLocal[]> => {
+export const localSearchSubscription = async ({
+	text = '',
+	filterUsers = true,
+	filterRooms = true,
+	filterMessagingAllowed = false
+}): Promise<ISearchLocal[]> => {
 	const searchText = text.trim();
 	const db = database.active;
 	const likeString = sanitizeLikeString(searchText);
+	const slugifiedString = slugifyLikeString(searchText);
 	let subscriptions = await db
 		.get('subscriptions')
 		.query(
-			Q.or(Q.where('name', Q.like(`%${likeString}%`)), Q.where('fname', Q.like(`%${likeString}%`))),
+			Q.or(
+				// `sanitized_fname` is an optional column, so it's going to start null and it's going to get filled over time
+				Q.where('sanitized_fname', Q.like(`%${slugifiedString}%`)),
+				// TODO: Remove the conditionals below at some point. It is merged at 4.39
+				// the param 'name' is slugified by the server when the slugify setting is enable, just for channels and teams
+				Q.where('name', Q.like(`%${slugifiedString}%`)),
+				// Still need the below conditionals because at the first moment the the sanitized_fname won't be filled
+				Q.where('name', Q.like(`%${likeString}%`)),
+				Q.where('fname', Q.like(`%${likeString}%`))
+			),
 			Q.experimentalSortBy('room_updated_at', Q.desc)
 		)
 		.fetch();
@@ -24,6 +42,17 @@ export const localSearch = async ({ text = '', filterUsers = true, filterRooms =
 		subscriptions = subscriptions.filter(item => item.t === 'd' && !isGroupChat(item));
 	} else if (!filterUsers && filterRooms) {
 		subscriptions = subscriptions.filter(item => item.t !== 'd' || isGroupChat(item));
+	}
+
+	if (filterMessagingAllowed) {
+		const username = reduxStore.getState().login.user.username as string;
+		const filteredSubscriptions = await Promise.all(
+			subscriptions.map(async item => {
+				const isItemReadOnly = await isReadOnly(item, username);
+				return isItemReadOnly ? null : item;
+			})
+		);
+		subscriptions = filteredSubscriptions.filter(item => item !== null) as TSubscriptionModel[];
 	}
 
 	const search = subscriptions.slice(0, 7).map(item => ({
@@ -35,28 +64,62 @@ export const localSearch = async ({ text = '', filterUsers = true, filterRooms =
 		t: item.t,
 		encrypted: item.encrypted,
 		lastMessage: item.lastMessage,
-		status: item.status
+		status: item.status,
+		teamMain: item.teamMain,
+		prid: item.prid,
+		f: item.f
 	})) as ISearchLocal[];
 
 	return search;
 };
 
-export const search = async ({ text = '', filterUsers = true, filterRooms = true }): Promise<(ISearch | ISearchLocal)[]> => {
+export const localSearchUsersMessageByRid = async ({ text = '', rid = '' }): Promise<IUserMessage[]> => {
+	const userId = reduxStore.getState().login.user.id;
+	const numberOfSuggestions = reduxStore.getState().settings.Number_of_users_autocomplete_suggestions as number;
+	const searchText = text.trim();
+	const db = database.active;
+	const likeString = sanitizeLikeString(searchText);
+	const messages = await db
+		.get('messages')
+		.query(
+			Q.and(Q.where('rid', rid), Q.where('u', Q.notLike(`%${userId}%`)), Q.where('t', null)),
+			Q.experimentalSortBy('ts', Q.desc),
+			Q.experimentalTake(50)
+		)
+		.fetch();
+
+	const regExp = new RegExp(`${likeString}`, 'i');
+	const users = messages.map(message => message.u);
+
+	const usersFromLocal = users
+		.filter((item1, index) => users.findIndex(item2 => item2._id === item1._id) === index) // Remove duplicated data from response
+		.filter(user => user?.name?.match(regExp) || user?.username?.match(regExp))
+		.slice(0, text ? 2 : numberOfSuggestions);
+
+	return usersFromLocal;
+};
+
+export const search = async ({ text = '', filterUsers = true, filterRooms = true, rid = '' }): Promise<TSearch[]> => {
 	const searchText = text.trim();
 
 	if (debounce) {
 		debounce('cancel');
 	}
 
-	const localSearchData = await localSearch({ text, filterUsers, filterRooms });
-	const usernames = localSearchData.map(sub => sub.name);
+	let localSearchData = [];
+	if (rid) {
+		localSearchData = await localSearchUsersMessageByRid({ text, rid });
+	} else {
+		localSearchData = await localSearchSubscription({ text, filterUsers, filterRooms });
+	}
+	const usernames = localSearchData.map(sub => sub.name as string);
 
-	const data = localSearchData as (ISearch | ISearchLocal)[];
+	const data: TSearch[] = localSearchData;
 
 	try {
-		if (localSearchData.length < 7) {
+		if (searchText && localSearchData.length < 7) {
 			const { users, rooms } = (await Promise.race([
-				spotlight(searchText, usernames, { users: filterUsers, rooms: filterRooms }),
+				spotlight(searchText, usernames, { users: filterUsers, rooms: filterRooms }, rid),
 				new Promise((resolve, reject) => (debounce = reject))
 			])) as { users: ISearch[]; rooms: ISearch[] };
 
@@ -69,6 +132,7 @@ export const search = async ({ text = '', filterUsers = true, filterRooms = true
 							...user,
 							rid: user.username,
 							name: user.username,
+							fname: user.name,
 							t: SubscriptionType.DIRECT,
 							search: true
 						});
@@ -77,7 +141,7 @@ export const search = async ({ text = '', filterUsers = true, filterRooms = true
 			if (filterRooms) {
 				rooms.forEach(room => {
 					// Check if it exists on local database
-					const index = data.findIndex(item => item.rid === room._id);
+					const index = data.findIndex(item => 'rid' in item && item.rid === room._id);
 					if (index === -1) {
 						data.push({
 							...room,

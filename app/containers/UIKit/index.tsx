@@ -29,6 +29,7 @@ import { DatePicker } from './DatePicker';
 import { Overflow } from './Overflow';
 import { ThemeContext } from '../../theme';
 import { IActions, IButton, IElement, IInputIndex, IParser, ISection } from './interfaces';
+import VideoConferenceBlock from './VideoConferenceBlock';
 
 const styles = StyleSheet.create({
 	input: {
@@ -137,7 +138,8 @@ class MessageParser extends UiKitParserMessage<React.ReactElement> {
 
 	multiStaticSelect(element: IElement, context: BlockContext) {
 		const [{ loading, value }, action] = useBlockContext(element, context);
-		return <MultiSelect {...element} value={value} onChange={action} context={context} loading={loading} multiselect />;
+		const valueFiltered = element.options?.filter(option => value.includes(option.value));
+		return <MultiSelect {...element} value={valueFiltered} onChange={action} context={context} loading={loading} multiselect />;
 	}
 
 	staticSelect(element: IElement, context: BlockContext) {
@@ -148,6 +150,10 @@ class MessageParser extends UiKitParserMessage<React.ReactElement> {
 	selectInput(element: IElement, context: BlockContext) {
 		const [{ loading, value }, action] = useBlockContext(element, context);
 		return <MultiSelect {...element} value={value} onChange={action} context={context} loading={loading} />;
+	}
+
+	video_conf(element: IElement & { callId: string }) {
+		return <VideoConferenceBlock callId={element.callId} blockId={element.blockId!} />;
 	}
 }
 

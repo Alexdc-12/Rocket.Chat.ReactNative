@@ -14,7 +14,7 @@ export interface IMessageAttachments {
 	isReply?: boolean;
 	showAttachment?: (file: IAttachment) => void;
 	getCustomEmoji: TGetCustomEmoji;
-	id: string;
+	author?: IUserMessage;
 }
 
 export interface IMessageAvatar {
@@ -40,7 +40,7 @@ export interface IMessageBroadcast {
 }
 
 export interface IMessageCallButton {
-	callJitsi?: () => void;
+	handleEnterCall?: () => void;
 }
 
 export interface IMessageContent {
@@ -63,11 +63,11 @@ export interface IMessageContent {
 	comment?: string;
 	hasError: boolean;
 	isHeader: boolean;
+	isTranslated: boolean;
 }
 
 export interface IMessageEmoji {
 	content: string;
-	baseUrl: string;
 	standardEmojiStyle: { fontSize: number };
 	customEmojiStyle: StyleProp<ImageStyle>;
 	getCustomEmoji: TGetCustomEmoji;
@@ -108,6 +108,7 @@ export interface IMessageInner
 	type: MessageType;
 	blocks: [];
 	urls?: IUrl[];
+	isPreview?: boolean;
 }
 
 export interface IMessage extends IMessageRepliedThread, IMessageInner, IMessageAvatar {

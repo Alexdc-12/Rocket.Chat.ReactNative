@@ -1,56 +1,58 @@
-import React, { memo, useEffect } from 'react';
+import React, { ElementType, memo, useEffect } from 'react';
 import { Easing, Notifier, NotifierRoot } from 'react-native-notifier';
-import { connect } from 'react-redux';
-import { dequal } from 'dequal';
 
 import NotifierComponent, { INotifierComponent } from './NotifierComponent';
 import EventEmitter from '../../lib/methods/helpers/events';
 import Navigation from '../../lib/navigation/appNavigation';
 import { getActiveRoute } from '../../lib/methods/helpers/navigation';
-import { IApplicationState } from '../../definitions';
-import { IRoom } from '../../reducers/room';
+import { useAppSelector } from '../../lib/hooks';
 
 export const INAPP_NOTIFICATION_EMITTER = 'NotificationInApp';
 
-const InAppNotification = memo(
-	({ rooms, appState }: { rooms: IRoom['rooms']; appState: string }) => {
-		const show = (notification: INotifierComponent['notification']) => {
-			if (appState !== 'foreground') {
-				return;
-			}
+const InAppNotification = memo(() => {
+	const { appState, subscribedRoom } = useAppSelector(state => ({
+		subscribedRoom: state.room.subscribedRoom,
+		appState: state.app.ready && state.app.foreground ? 'foreground' : 'background'
+	}));
 
-			const { payload } = notification;
-			const state = Navigation.navigationRef.current?.getRootState();
-			const route = getActiveRoute(state);
-			if (payload.rid) {
-				if (rooms.includes(payload.rid) || route?.name === 'JitsiMeetView') {
-					return;
-				}
-				Notifier.showNotification({
-					showEasing: Easing.inOut(Easing.quad),
-					Component: NotifierComponent,
-					componentProps: {
-						notification
-					}
-				});
-			}
+	const show = (
+		notification: INotifierComponent['notification'] & {
+			customComponent?: ElementType;
+			customTime?: number;
+			customNotification?: boolean;
+			hideOnPress?: boolean;
+			swipeEnabled?: boolean;
+		}
+	) => {
+		if (appState !== 'foreground') return;
+
+		const { payload } = notification;
+		const state = Navigation.navigationRef.current?.getRootState();
+		const route = getActiveRoute(state);
+		if (payload?.rid || notification.customNotification) {
+			if (payload?.rid === subscribedRoom || route?.name === 'JitsiMeetView' || payload?.message?.t === 'videoconf') return;
+
+			Notifier.showNotification({
+				showEasing: Easing.inOut(Easing.quad),
+				Component: notification.customComponent || NotifierComponent,
+				componentProps: {
+					notification
+				},
+				duration: notification.customTime || 3000, // default 3s,
+				hideOnPress: notification.hideOnPress ?? true,
+				swipeEnabled: notification.swipeEnabled ?? true
+			});
+		}
+	};
+
+	useEffect(() => {
+		const listener = EventEmitter.addEventListener(INAPP_NOTIFICATION_EMITTER, show);
+		return () => {
+			EventEmitter.removeListener(INAPP_NOTIFICATION_EMITTER, listener);
 		};
+	}, [subscribedRoom, appState]);
 
-		useEffect(() => {
-			const listener = EventEmitter.addEventListener(INAPP_NOTIFICATION_EMITTER, show);
-			return () => {
-				EventEmitter.removeListener(INAPP_NOTIFICATION_EMITTER, listener);
-			};
-		}, [rooms]);
-
-		return <NotifierRoot />;
-	},
-	(prevProps, nextProps) => dequal(prevProps.rooms, nextProps.rooms)
-);
-
-const mapStateToProps = (state: IApplicationState) => ({
-	rooms: state.room.rooms,
-	appState: state.app.ready && state.app.foreground ? 'foreground' : 'background'
+	return <NotifierRoot />;
 });
 
-export default connect(mapStateToProps)(InAppNotification);
+export default InAppNotification;

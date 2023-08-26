@@ -1,10 +1,11 @@
 import React from 'react';
+import { ViewStyle } from 'react-native';
 
 import { TGetCustomEmoji } from '../../definitions/IEmoji';
 
 export interface IAvatar {
 	server?: string;
-	style?: any;
+	style?: ViewStyle;
 	text?: string;
 	avatar?: string;
 	emoji?: string;
@@ -21,5 +22,6 @@ export interface IAvatar {
 	rid?: string;
 	blockUnauthenticatedAccess?: boolean;
 	serverVersion?: string | null;
-	externalProviderUrl?: string;
+	avatarExternalProviderUrl?: string;
+	roomAvatarExternalProviderUrl?: string;
 }

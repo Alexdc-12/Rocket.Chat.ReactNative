@@ -7,7 +7,9 @@ import {
 	SubscriptionType,
 	IUser,
 	IAvatarSuggestion,
-	IProfileParams
+	IProfileParams,
+	RoomType,
+	IServerRoom
 } from '../../definitions';
 import { ISpotlight } from '../../definitions/ISpotlight';
 import { TEAM_TYPE } from '../../definitions/ITeam';
@@ -74,6 +76,14 @@ export const e2eRequestRoomKey = (rid: string, e2eKeyId: string): Promise<{ mess
 	// RC 0.70.0
 	sdk.methodCallWrapper('stream-notify-room-users', `${rid}/e2ekeyRequest`, rid, e2eKeyId);
 
+export const e2eAcceptSuggestedGroupKey = (rid: string): Promise<{ success: boolean }> =>
+	// RC 5.5
+	sdk.post('e2e.acceptSuggestedGroupKey', { rid });
+
+export const e2eRejectSuggestedGroupKey = (rid: string): Promise<{ success: boolean }> =>
+	// RC 5.5
+	sdk.post('e2e.rejectSuggestedGroupKey', { rid });
+
 export const updateJitsiTimeout = (roomId: string) =>
 	// RC 0.74.0
 	sdk.post('video-conference/jitsi.update-timeout', { roomId });
@@ -89,9 +99,16 @@ export const forgotPassword = (email: string) =>
 export const sendConfirmationEmail = (email: string): Promise<{ message: string; success: boolean }> =>
 	sdk.methodCallWrapper('sendConfirmationEmail', email);
 
-export const spotlight = (search: string, usernames: string[], type: { users: boolean; rooms: boolean }): Promise<ISpotlight> =>
+export const spotlight = (
+	search: string,
+	usernames: string[],
+	type: { users: boolean; rooms: boolean },
+	rid?: string
+): Promise<ISpotlight> =>
 	// RC 0.51.0
-	sdk.methodCallWrapper('spotlight', search, usernames, type);
+	rid
+		? sdk.methodCallWrapper('spotlight', search, usernames, type, rid)
+		: sdk.methodCallWrapper('spotlight', search, usernames, type);
 
 export const createDirectMessage = (username: string) =>
 	// RC 0.59.0
@@ -215,17 +232,23 @@ export const teamListRoomsOfUser = ({ teamId, userId }: { teamId: string; userId
 	sdk.get('teams.listRoomsOfUser', { teamId, userId });
 
 export const convertChannelToTeam = ({ rid, name, type }: { rid: string; name: string; type: 'c' | 'p' }) => {
-	const params = {
-		...(type === 'c'
-			? {
+	const serverVersion = reduxStore.getState().server.version;
+	let params;
+	if (type === 'c') {
+		// https://github.com/RocketChat/Rocket.Chat/pull/25279
+		params = compareServerVersion(serverVersion, 'greaterThanOrEqualTo', '4.8.0')
+			? { channelId: rid }
+			: {
 					channelId: rid,
 					channelName: name
-			  }
-			: {
-					roomId: rid,
-					roomName: name
-			  })
-	};
+			  };
+	} else {
+		params = {
+			roomId: rid,
+			roomName: name
+		};
+	}
+
 	return sdk.post(type === 'c' ? 'channels.convertToTeam' : 'groups.convertToTeam', params);
 };
 
@@ -312,6 +335,9 @@ export const getUserPreferences = (userId: string) =>
 export const getRoomInfo = (roomId: string) =>
 	// RC 0.72.0
 	sdk.get('rooms.info', { roomId });
+
+export const getRoomByTypeAndName = (roomType: RoomType, roomName: string): Promise<IServerRoom> =>
+	sdk.methodCallWrapper('getRoomByTypeAndName', roomType, roomName);
 
 export const getVisitorInfo = (visitorId: string) =>
 	// RC 2.3.0
@@ -546,7 +572,7 @@ export const saveRoomSettings = (
 	rid: string,
 	params: {
 		roomName?: string;
-		roomAvatar?: string;
+		roomAvatar?: string | null;
 		roomDescription?: string;
 		roomTopic?: string;
 		roomAnnouncement?: string;
@@ -587,7 +613,7 @@ export const getRoomRoles = (
 	// RC 0.65.0
 	sdk.get(`${roomTypeToApiType(type)}.roles`, { roomId });
 
-export const getAvatarSuggestion = (): Promise<IAvatarSuggestion> =>
+export const getAvatarSuggestion = (): Promise<{ [service: string]: IAvatarSuggestion }> =>
 	// RC 0.51.0
 	sdk.methodCallWrapper('getAvatarSuggestion');
 
@@ -797,10 +823,14 @@ export const addUsersToRoom = (rid: string): Promise<boolean> => {
 };
 
 export const emitTyping = (room: IRoom, typing = true) => {
-	const { login, settings } = reduxStore.getState();
+	const { login, settings, server } = reduxStore.getState();
 	const { UI_Use_Real_Name } = settings;
+	const { version: serverVersion } = server;
 	const { user } = login;
 	const name = UI_Use_Real_Name ? user.name : user.username;
+	if (compareServerVersion(serverVersion, 'greaterThanOrEqualTo', '4.0.0')) {
+		return sdk.methodCall('stream-notify-room', `${room}/user-activity`, name, typing ? ['user-typing'] : []);
+	}
 	return sdk.methodCall('stream-notify-room', `${room}/typing`, name, typing);
 };
 
@@ -917,10 +947,14 @@ export function getUserInfo(userId: string) {
 
 export const toggleFavorite = (roomId: string, favorite: boolean) => sdk.post('rooms.favorite', { roomId, favorite });
 
-export const videoConferenceJoin = (callId: string, cam: boolean) =>
-	sdk.post('video-conference.join', { callId, state: { cam } });
+export const videoConferenceJoin = (callId: string, cam?: boolean, mic?: boolean) =>
+	sdk.post('video-conference.join', { callId, state: { cam: !!cam, mic: mic === undefined ? true : mic } });
 
-export const videoConferenceStart = (roomId: string) => sdk.post('video-conference.start', { roomId });
+export const videoConferenceGetCapabilities = () => sdk.get('video-conference.capabilities');
+
+export const videoConferenceStart = (roomId: string) => sdk.post('video-conference.start', { roomId, allowRinging: true });
+
+export const videoConferenceCancel = (callId: string) => sdk.post('video-conference.cancel', { callId });
 
 export const saveUserProfileMethod = (
 	params: IProfileParams,
@@ -934,3 +968,10 @@ export const saveUserProfileMethod = (
 export const deleteOwnAccount = (password: string, confirmRelinquish = false): any =>
 	// RC 0.67.0
 	sdk.post('users.deleteOwnAccount', { password, confirmRelinquish });
+
+export const postMessage = (roomId: string, text: string) => sdk.post('chat.postMessage', { roomId, text });
+
+export const notifyUser = (type: string, params: Record<string, any>): Promise<boolean> =>
+	sdk.methodCall('stream-notify-user', type, params);
+
+export const getUsersRoles = (): Promise<boolean> => sdk.methodCall('getUserRoles');

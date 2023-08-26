@@ -31,13 +31,15 @@ import {
 	IUser,
 	TMessageModel,
 	IUrl,
-	IEmoji,
 	IAttachment,
 	ISubscription,
 	SubscriptionType,
-	TSubscriptionModel
+	TSubscriptionModel,
+	TGetCustomEmoji,
+	ICustomEmoji
 } from '../../definitions';
 import { Services } from '../../lib/services';
+import { TNavigation } from '../../stacks/stackType';
 
 const QUERY_SIZE = 50;
 
@@ -58,7 +60,7 @@ export interface IRoomInfoParam {
 interface INavigationOption {
 	navigation: CompositeNavigationProp<
 		StackNavigationProp<ChatsStackParamList, 'SearchMessagesView'>,
-		StackNavigationProp<InsideStackParamList>
+		StackNavigationProp<InsideStackParamList & TNavigation>
 	>;
 	route: RouteProp<ChatsStackParamList, 'SearchMessagesView'>;
 }
@@ -68,7 +70,7 @@ interface ISearchMessagesViewProps extends INavigationOption {
 	baseUrl: string;
 	serverVersion: string;
 	customEmojis: {
-		[key: string]: IEmoji;
+		[key: string]: ICustomEmoji;
 	};
 	theme: TSupportedThemes;
 	useRealName: boolean;
@@ -201,7 +203,7 @@ class SearchMessagesView extends React.Component<ISearchMessagesViewProps, ISear
 		await this.getMessages(searchText, true);
 	}, 1000);
 
-	getCustomEmoji = (name: string) => {
+	getCustomEmoji: TGetCustomEmoji = name => {
 		const { customEmojis } = this.props;
 		const emoji = customEmojis[name];
 		if (emoji) {

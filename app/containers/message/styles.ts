@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import sharedStyles from '../../views/Styles';
-import { isTablet } from '../../lib/methods/helpers';
+import { isAndroid, isTablet } from '../../lib/methods/helpers';
 
 export default StyleSheet.create({
 	root: {
@@ -41,13 +41,13 @@ export default StyleSheet.create({
 	reactionButton: {
 		marginRight: 8,
 		marginBottom: 8,
-		borderRadius: 2
+		borderRadius: 4
 	},
 	reactionContainer: {
 		flexDirection: 'row',
 		justifyContent: 'center',
 		alignItems: 'center',
-		borderRadius: 2,
+		borderRadius: 4,
 		borderWidth: 1,
 		height: 28,
 		minWidth: 46.3
@@ -85,7 +85,7 @@ export default StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'center',
-		borderRadius: 2
+		borderRadius: 4
 	},
 	buttonIcon: {
 		marginRight: 8
@@ -104,6 +104,9 @@ export default StyleSheet.create({
 		borderRadius: 4,
 		borderWidth: 1,
 		overflow: 'hidden'
+	},
+	imageBlurContainer: {
+		height: '100%'
 	},
 	imagePressed: {
 		opacity: 0.5
@@ -168,5 +171,22 @@ export default StyleSheet.create({
 	threadDetails: {
 		flex: 1,
 		marginLeft: 12
+	},
+	blurView: {
+		position: 'absolute',
+		borderWidth: 0,
+		top: 0,
+		left: 0,
+		bottom: 0,
+		right: 0
+	},
+	blurIndicator: {
+		position: 'absolute',
+		justifyContent: 'center',
+		alignItems: 'center'
+	},
+	mustWrapBlur: {
+		// https://github.com/Kureev/react-native-blur/issues/520#issuecomment-1378339192 Fix BlurView
+		overflow: isAndroid ? 'hidden' : 'visible'
 	}
 });
