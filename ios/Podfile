@@ -18,6 +18,11 @@ def all_pods
     rescue => e
       Pod::UI.warn e
     end
+    begin
+      expo_patch_react_imports!(installer)
+    rescue => e
+      Pod::UI.warn e
+    end
   end
 
   flags = get_default_flags()

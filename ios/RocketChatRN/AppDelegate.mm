@@ -55,7 +55,7 @@
   }
 
   self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-  UIViewController *rootViewController = [UIViewController new];
+  UIViewController *rootViewController = [self.reactDelegate createRootViewController];
   UINavigationController *navigationController = [[UINavigationController alloc]initWithRootViewController:rootViewController];
   navigationController.navigationBarHidden = YES;
   rootViewController.view = rootView;
@@ -70,6 +70,7 @@
 
   [RNBootSplash initWithStoryboard:@"LaunchScreen" rootView:rootView];
 
+  [super application:application didFinishLaunchingWithOptions:launchOptions];
   return YES;
 }
 
