@@ -53,6 +53,7 @@ export const merge = (
 		}
 		mergedSubscription.encrypted = room?.encrypted;
 		mergedSubscription.e2eKeyId = room?.e2eKeyId;
+		mergedSubscription.usersWaitingForE2EKeys = room?.usersWaitingForE2EKeys;
 		mergedSubscription.avatarETag = room?.avatarETag;
 		mergedSubscription.teamId = room?.teamId;
 		mergedSubscription.teamMain = room?.teamMain;
@@ -66,6 +67,11 @@ export const merge = (
 			mergedSubscription.muted = room.muted.filter(muted => !!muted);
 		} else {
 			mergedSubscription.muted = [];
+		}
+		if (room?.unmuted?.length) {
+			mergedSubscription.unmuted = room.unmuted.filter(unmuted => !!unmuted);
+		} else {
+			mergedSubscription.unmuted = [];
 		}
 		if (room?.v) {
 			mergedSubscription.visitor = room.v;
@@ -103,6 +109,10 @@ export const merge = (
 	mergedSubscription.blocked = !!mergedSubscription.blocked;
 	mergedSubscription.hideMentionStatus = !!mergedSubscription.hideMentionStatus;
 	mergedSubscription.sanitizedFname = slugifyLikeString(mergedSubscription.fname || mergedSubscription.name);
+
+	if (!mergedSubscription.E2ESuggestedKey) {
+		mergedSubscription.E2ESuggestedKey = null;
+	}
 	return mergedSubscription;
 };
 

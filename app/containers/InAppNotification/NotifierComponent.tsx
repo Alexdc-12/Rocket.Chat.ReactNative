@@ -11,7 +11,6 @@ import { themes } from '../../lib/constants';
 import { useTheme } from '../../theme';
 import { ROW_HEIGHT } from '../RoomItem';
 import { goRoom } from '../../lib/methods/helpers/goRoom';
-import { useOrientation } from '../../dimensions';
 import { IApplicationState, ISubscription, SubscriptionType } from '../../definitions';
 import { hideNotification } from '../../lib/methods/helpers/notifications';
 
@@ -76,8 +75,6 @@ const styles = StyleSheet.create({
 const NotifierComponent = React.memo(({ notification, isMasterDetail }: INotifierComponent) => {
 	const { theme } = useTheme();
 	const insets = useSafeAreaInsets();
-	const { isLandscape } = useOrientation();
-
 	const { text, payload } = notification;
 	const { type, rid } = payload;
 	const name = type === 'd' ? payload.sender.username : payload.name;
@@ -104,35 +101,33 @@ const NotifierComponent = React.memo(({ notification, isMasterDetail }: INotifie
 		<View
 			style={[
 				styles.container,
-				(isMasterDetail || isLandscape) && styles.small,
+				isMasterDetail && styles.small,
 				{
-					backgroundColor: themes[theme].focusedBackground,
-					borderColor: themes[theme].separatorColor,
+					backgroundColor: themes[theme].surfaceLight,
+					borderColor: themes[theme].strokeLight,
 					marginTop: insets.top
 				}
-			]}
-		>
+			]}>
 			<Touchable
 				style={styles.content}
 				onPress={onPress}
 				hitSlop={BUTTON_HIT_SLOP}
 				background={Touchable.SelectableBackgroundBorderless()}
-				testID={`in-app-notification-${text}`}
-			>
+				testID={`in-app-notification-${text}`}>
 				<>
 					<Avatar text={avatar} size={AVATAR_SIZE} type={type} rid={rid} style={styles.avatar} />
 					<View style={styles.inner}>
-						<Text style={[styles.roomName, { color: themes[theme].titleText }]} numberOfLines={1}>
+						<Text style={[styles.roomName, { color: themes[theme].fontTitlesLabels }]} numberOfLines={1}>
 							{title}
 						</Text>
-						<Text style={[styles.message, { color: themes[theme].titleText }]} numberOfLines={1}>
+						<Text style={[styles.message, { color: themes[theme].fontTitlesLabels }]} numberOfLines={1}>
 							{text}
 						</Text>
 					</View>
 				</>
 			</Touchable>
 			<Touchable onPress={hideNotification} hitSlop={BUTTON_HIT_SLOP} background={Touchable.SelectableBackgroundBorderless()}>
-				<CustomIcon name='close' size={20} color={themes[theme].titleText} style={styles.close} />
+				<CustomIcon name='close' size={20} style={styles.close} />
 			</Touchable>
 		</View>
 	);

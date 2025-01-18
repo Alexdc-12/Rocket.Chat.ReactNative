@@ -83,6 +83,7 @@ const createOrUpdateSubscription = async (subscription: ISubscription, room: ISe
 					archived: s.archived,
 					joinCodeRequired: s.joinCodeRequired,
 					muted: s.muted,
+					unmuted: s.unmuted,
 					ignored: s.ignored,
 					broadcast: s.broadcast,
 					prid: s.prid,
@@ -181,6 +182,11 @@ const createOrUpdateSubscription = async (subscription: ISubscription, room: ISe
 							s.bannerClosed = false;
 						}
 					}
+					if (sub.hideUnreadStatus && subscription.hasOwnProperty('hideUnreadStatus')) {
+						if (sub.hideUnreadStatus !== subscription.hideUnreadStatus) {
+							s.hideUnreadStatus = !!subscription.hideUnreadStatus;
+						}
+					}
 				});
 				batch.push(update);
 			} catch (e) {
@@ -232,7 +238,7 @@ const createOrUpdateSubscription = async (subscription: ISubscription, room: ISe
 		}
 
 		await db.write(async () => {
-			await db.batch(...batch);
+			await db.batch(batch);
 		});
 	} catch (e) {
 		log(e);
@@ -254,6 +260,8 @@ const debouncedUpdate = (subscription: ISubscription) => {
 					if (batch[key]) {
 						if (/SUB/.test(key)) {
 							const sub = batch[key] as ISubscription;
+							// When calling the api subscriptions.read passing readThreads as true it does not return this prop
+							if (!sub.tunread) sub.tunread = [];
 							const roomQueueId = getRoomQueueId(sub.rid);
 							const room = batch[roomQueueId] as IRoom;
 							delete batch[roomQueueId];
@@ -293,6 +301,9 @@ export default function subscribeRooms() {
 		const [, ev] = ddpMessage.fields.eventName.split('/');
 		if (/userData/.test(ev)) {
 			const [{ diff, unset }] = ddpMessage.fields.args;
+			if (diff?.emails?.length > 0) {
+				store.dispatch(setUser({ emails: diff.emails }));
+			}
 			if (diff?.statusLivechat) {
 				store.dispatch(setUser({ statusLivechat: diff.statusLivechat }));
 			}
@@ -388,14 +399,16 @@ export default function subscribeRooms() {
 
 				// If it's from a encrypted room
 				if (message?.t === E2E_MESSAGE_TYPE) {
-					// Decrypt this message content
-					const { msg } = await Encryption.decryptMessage({ ...message, rid });
-					// If it's a direct the content is the message decrypted
-					if (room.t === 'd') {
-						notification.text = msg;
-						// If it's a private group we should add the sender name
-					} else {
-						notification.text = `${getSenderName(sender)}: ${msg}`;
+					if (message.msg) {
+						// Decrypt this message content
+						const { msg } = await Encryption.decryptMessage({ ...message, rid });
+						// If it's a direct the content is the message decrypted
+						if (room.t === 'd') {
+							notification.text = msg;
+							// If it's a private group we should add the sender name
+						} else {
+							notification.text = `${getSenderName(sender)}: ${msg}`;
+						}
 					}
 				}
 			} catch (e) {

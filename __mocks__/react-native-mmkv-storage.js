@@ -1,6 +1,7 @@
 export class MMKVLoader {
+	// eslint-disable-next-line no-useless-constructor
 	constructor() {
-		console.log('MMKVLoader constructor mock');
+		// console.log('MMKVLoader constructor mock');
 	}
 
 	setProcessingMode = jest.fn().mockImplementation(() => ({
@@ -20,4 +21,5 @@ export const IOSAccessibleStates = {
 	AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: ''
 };
 
-export const create = jest.fn();
+// fix the useUserPreference hook
+export const create = jest.fn().mockImplementation(() => jest.fn().mockImplementation(() => [0, jest.fn()]));

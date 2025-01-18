@@ -11,6 +11,7 @@ export type TActionSheetOptionsItem = {
 	testID?: string;
 	onPress: () => void;
 	right?: () => React.ReactElement;
+	enabled?: boolean;
 };
 
 export type TActionSheetOptions = {
@@ -18,8 +19,9 @@ export type TActionSheetOptions = {
 	headerHeight?: number;
 	customHeader?: React.ReactElement | null;
 	hasCancel?: boolean;
-	type?: string;
+	// children can both use snaps or dynamic
 	children?: React.ReactElement | null;
+	/** Required if your action sheet needs vertical scroll */
 	snaps?: (string | number)[];
 	onClose?: () => void;
 	enableContentPanningGesture?: boolean;
@@ -50,8 +52,8 @@ export const withActionSheet = (Component: React.ComponentType<any>): typeof Com
 const actionSheetRef: React.Ref<IActionSheetProvider> = createRef();
 
 export const ActionSheetProvider = React.memo(({ children }: { children: React.ReactElement | React.ReactElement[] }) => {
-	const getContext = () => ({
-		showActionSheet: (options: TActionSheetOptions) => {
+	const getContext = (): IActionSheetProvider => ({
+		showActionSheet: options => {
 			actionSheetRef.current?.showActionSheet(options);
 		},
 		hideActionSheet: () => {
@@ -68,6 +70,10 @@ export const ActionSheetProvider = React.memo(({ children }: { children: React.R
 	);
 });
 
-export const hideActionSheetRef = (): void => {
+export const showActionSheetRef: IActionSheetProvider['showActionSheet'] = options => {
+	actionSheetRef?.current?.showActionSheet(options);
+};
+
+export const hideActionSheetRef: IActionSheetProvider['hideActionSheet'] = () => {
 	actionSheetRef?.current?.hideActionSheet();
 };

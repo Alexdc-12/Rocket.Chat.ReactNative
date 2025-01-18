@@ -16,7 +16,7 @@ async function navigateToRoomInfo(room: string) {
 }
 
 async function swipe(direction: Detox.Direction) {
-	await element(by.id('room-info-edit-view-list')).swipe(direction);
+	await element(by.id('room-info-edit-view-list')).swipe(direction, 'fast', 1);
 }
 
 async function waitForToast() {
@@ -136,24 +136,26 @@ describe('Room info screen', () => {
 		describe('Usage', () => {
 			it('should reset form', async () => {
 				await element(by.id('room-info-edit-view-name')).replaceText('abc');
-				await element(by.id('room-info-edit-view-description')).replaceText('abc');
+				await element(by.id('room-info-edit-view-name')).tapReturnKey();
 				await element(by.id('room-info-edit-view-topic')).replaceText('abc');
 				await element(by.id('room-info-edit-view-topic')).tapReturnKey();
 				await element(by.id('room-info-edit-view-announcement')).replaceText('abc');
 				await element(by.id('room-info-edit-view-announcement')).tapReturnKey();
+				await element(by.id('room-info-edit-view-description')).replaceText('abc');
+				await element(by.id('room-info-edit-view-description')).tapReturnKey();
 				await element(by.id('room-info-edit-view-password')).replaceText('abc');
 				await element(by.id('room-info-edit-view-password')).tapReturnKey();
-				await swipe('down'); // dismiss keyboard
-				await element(by.id('room-info-edit-view-t')).tap();
 				await swipe('up');
+				await element(by.id('room-info-edit-view-t')).tap();
 				await element(by.id('room-info-edit-view-ro')).tap();
 				await element(by.id('room-info-edit-view-react-when-ro')).tap();
+				await swipe('up');
 				await element(by.id('room-info-edit-view-reset')).tap();
 				// after reset
 				await expect(element(by.id('room-info-edit-view-name'))).toHaveText(room);
-				await expect(element(by.id('room-info-edit-view-description'))).toHaveText('');
 				await expect(element(by.id('room-info-edit-view-topic'))).toHaveText('');
 				await expect(element(by.id('room-info-edit-view-announcement'))).toHaveText('');
+				await expect(element(by.id('room-info-edit-view-description'))).toHaveText('');
 				await expect(element(by.id('room-info-edit-view-password'))).toHaveText('');
 				await expect(element(by.id('room-info-edit-view-t'))).toHaveToggleValue(true);
 				await expect(element(by.id('room-info-edit-view-ro'))).toHaveToggleValue(false);
@@ -183,14 +185,13 @@ describe('Room info screen', () => {
 
 			it('should change room description, topic, announcement', async () => {
 				await sleep(5000); // wait for changes to be applied from socket
-				await element(by.id('room-info-edit-view-description')).replaceText('new description');
 				await element(by.id('room-info-edit-view-topic')).replaceText('new topic');
-				await swipe('down'); // dismiss keyboard
-				// announcement is hide by the keyboard
+				await element(by.id('room-info-edit-view-topic')).tapReturnKey();
 				await element(by.id('room-info-edit-view-announcement')).replaceText('new announcement');
 				await element(by.id('room-info-edit-view-announcement')).tapReturnKey();
+				await element(by.id('room-info-edit-view-description')).replaceText('new description');
+				await element(by.id('room-info-edit-view-description')).tapReturnKey();
 				await element(by.id('room-info-edit-view-password')).tapReturnKey();
-				await swipe('down'); // dismiss keyboard
 				await swipe('up');
 				await element(by.id('room-info-edit-view-submit')).tap();
 				await waitForToast();
@@ -227,9 +228,9 @@ describe('Room info screen', () => {
 			// });
 
 			it('should change room type', async () => {
-				await swipe('down');
-				await element(by.id('room-info-edit-view-t')).tap();
+				await sleep(300);
 				await swipe('up');
+				await element(by.id('room-info-edit-view-t')).tap();
 				await element(by.id('room-info-edit-view-submit')).tap();
 				await waitForToast();
 			});
@@ -264,6 +265,34 @@ describe('Room info screen', () => {
 					.toBeVisible()
 					.withTimeout(10000);
 				await waitFor(element(by.id(`user-role-Livechat-Agent`)))
+					.toBeVisible()
+					.withTimeout(10000);
+			});
+		});
+
+		describe('Navigate to user status-test', () => {
+			it('Back to rooms list view', async () => {
+				await tapBack();
+				await sleep(300);
+				await tapBack();
+				await sleep(300);
+				await tapBack();
+				await sleep(300);
+			});
+			it('should see the status text with show more label', async () => {
+				const statusTextExpected =
+					'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam laoreet odio lectus, nec varius nisi semper ut porta ante';
+				await navigateToRoomInfo('status-test');
+				await waitFor(element(by.id(`collapsible-text-truncated-${statusTextExpected}`)))
+					.toBeVisible()
+					.withTimeout(10000);
+				await sleep(400);
+				const textWithShowMoreRegExp = /Lorem[\s\S]+... Show more/i;
+				await waitFor(element(by[textMatcher](textWithShowMoreRegExp)))
+					.toExist()
+					.withTimeout(10000);
+				await element(by.id(`collapsible-text-truncated-${statusTextExpected}`)).tap({ x: 320, y: 24 });
+				await waitFor(element(by.id(`collapsible-text-${statusTextExpected}`)))
 					.toBeVisible()
 					.withTimeout(10000);
 			});

@@ -36,7 +36,7 @@ interface IMultiSelect {
 	onClose?: () => void;
 	inputStyle?: TextStyle;
 	value?: any[];
-	disabled?: boolean | null;
+	disabled?: boolean;
 	innerInputStyle?: object;
 }
 
@@ -87,8 +87,7 @@ export const MultiSelect = React.memo(
 						selectedItems={selected}
 					/>
 				),
-				onClose,
-				headerHeight: 275
+				onClose
 			});
 		};
 		const onHide = () => {
@@ -120,7 +119,7 @@ export const MultiSelect = React.memo(
 			<Button title={`${selected.length} selecteds`} onPress={onShow} loading={loading} />
 		) : (
 			<Input onPress={onShow} loading={loading} disabled={disabled} inputStyle={inputStyle} innerInputStyle={innerInputStyle}>
-				<Text style={[styles.pickerText, { color: currentValue ? colors.titleText : colors.auxiliaryText }]}>
+				<Text style={[styles.pickerText, { color: currentValue ? colors.fontTitlesLabels : colors.fontSecondaryInfo }]}>
 					{currentValue || placeholder.text}
 				</Text>
 			</Input>
@@ -132,7 +131,7 @@ export const MultiSelect = React.memo(
 					{selected.length ? (
 						<Chips items={selected} onSelect={(item: any) => (disabled ? {} : onSelect(item))} />
 					) : (
-						<Text style={[styles.pickerText, { color: colors.auxiliaryText }]}>{placeholder.text}</Text>
+						<Text style={[styles.pickerText, { color: colors.fontSecondaryInfo }]}>{placeholder.text}</Text>
 					)}
 				</Input>
 			);

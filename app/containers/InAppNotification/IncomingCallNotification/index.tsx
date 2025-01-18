@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, View } from 'react-native';
 import Touchable from 'react-native-platform-touchable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -10,7 +10,6 @@ import i18n from '../../../i18n';
 import { useAppSelector } from '../../../lib/hooks';
 import { useEndpointData } from '../../../lib/hooks/useEndpointData';
 import { hideNotification } from '../../../lib/methods/helpers/notifications';
-import { useTheme } from '../../../theme';
 import { CustomIcon } from '../../CustomIcon';
 import { CallHeader } from '../../CallHeader';
 import { useStyle } from './style';
@@ -36,22 +35,17 @@ const IncomingCallHeader = React.memo(
 	({ uid, callId, avatar, roomName }: { callId: string; avatar: string; uid: string; roomName: string }) => {
 		const [mic, setMic] = useState(true);
 		const [cam, setCam] = useState(false);
+		const [audio, setAudio] = useState(true);
 		const dispatch = useDispatch();
-
 		const isMasterDetail = useAppSelector(state => state.app.isMasterDetail);
 		const styles = useStyle();
-
 		const insets = useSafeAreaInsets();
-		const { height, width } = useWindowDimensions();
-		const isLandscape = width > height;
-
-		const { colors } = useTheme();
 
 		return (
 			<View
 				style={[
 					styles.container,
-					(isMasterDetail || isLandscape) && styles.small,
+					isMasterDetail && styles.small,
 					{
 						marginTop: insets.top
 					}
@@ -69,12 +63,20 @@ const IncomingCallHeader = React.memo(
 					direct={true}
 				/>
 				<View style={styles.row}>
-					<Touchable hitSlop={BUTTON_HIT_SLOP} onPress={hideNotification} style={styles.closeButton}>
-						<CustomIcon name='close' size={20} color={colors.gray300} />
+					<Touchable
+						hitSlop={BUTTON_HIT_SLOP}
+						onPress={() => {
+							setAudio(!audio);
+							hideNotification();
+						}}
+						style={styles.closeButton}
+					>
+						<CustomIcon name='close' size={20} />
 					</Touchable>
 					<Touchable
 						hitSlop={BUTTON_HIT_SLOP}
 						onPress={() => {
+							setAudio(!audio);
 							hideNotification();
 							dispatch(cancelCall({ callId }));
 						}}
@@ -85,6 +87,7 @@ const IncomingCallHeader = React.memo(
 					<Touchable
 						hitSlop={BUTTON_HIT_SLOP}
 						onPress={() => {
+							setAudio(!audio);
 							hideNotification();
 							dispatch(acceptCall({ callId }));
 						}}
@@ -93,7 +96,7 @@ const IncomingCallHeader = React.memo(
 						<Text style={styles.buttonText}>{i18n.t('accept')}</Text>
 					</Touchable>
 				</View>
-				<Ringer ringer={ERingerSounds.RINGTONE} />
+				{audio ? <Ringer ringer={ERingerSounds.RINGTONE} /> : null}
 			</View>
 		);
 	}

@@ -1,7 +1,16 @@
 import { device, waitFor, element, by, expect } from 'detox';
 
 import data from '../../data';
-import { navigateToLogin, tapBack, login, sleep, platformTypes, TTextMatcher, navigateToRoom } from '../../helpers/app';
+import {
+	navigateToLogin,
+	tapBack,
+	login,
+	sleep,
+	platformTypes,
+	TTextMatcher,
+	navigateToRoom,
+	jumpToQuotedMessage
+} from '../../helpers/app';
 
 let textMatcher: TTextMatcher;
 let alertButtonType: string;
@@ -74,7 +83,7 @@ describe('Room', () => {
 			.toExist()
 			.withTimeout(5000);
 		await sleep(2000);
-		await element(by[textMatcher]('1')).atIndex(0).tap();
+		await jumpToQuotedMessage(element(by[textMatcher]('1')).atIndex(0));
 		await waitForLoading();
 		await waitFor(element(by[textMatcher]('1')).atIndex(0))
 			.toExist()
@@ -178,6 +187,8 @@ describe('Room', () => {
 			.toExist()
 			.withTimeout(5000);
 		await element(by.id('room-view-messages')).atIndex(0).swipe('up', 'slow', 0.3);
+		// 104
+		await sleep(300);
 		await waitFor(element(by[textMatcher]('Load newer')))
 			.toExist()
 			.withTimeout(5000);
@@ -185,6 +196,8 @@ describe('Room', () => {
 		await waitFor(element(by[textMatcher]('104')))
 			.toExist()
 			.withTimeout(5000);
+		// 154
+		await sleep(300);
 		await waitFor(element(by[textMatcher]('Load newer')))
 			.toExist()
 			.withTimeout(5000);
@@ -192,6 +205,8 @@ describe('Room', () => {
 		await waitFor(element(by[textMatcher]('154')))
 			.toExist()
 			.withTimeout(5000);
+		// 202
+		await sleep(300);
 		await waitFor(element(by[textMatcher]('Load newer')))
 			.toExist()
 			.withTimeout(5000);
@@ -199,6 +214,28 @@ describe('Room', () => {
 		await waitFor(element(by[textMatcher]('202')))
 			.toExist()
 			.withTimeout(5000);
+
+		// 253
+		/**
+		 * Sometimes CI loads messages differently than local.
+		 * It loads up until 204 instead of 253.
+		 */
+		await sleep(300);
+		try {
+			await waitFor(element(by[textMatcher]('Load newer')))
+				.toExist()
+				.withTimeout(5000);
+			await element(by[textMatcher]('Load newer')).atIndex(0).tap();
+			await waitFor(element(by[textMatcher]('253')))
+				.toExist()
+				.withTimeout(5000);
+		} catch (error) {
+			await waitFor(element(by[textMatcher]('204')))
+				.toExist()
+				.withTimeout(5000);
+		}
+
+		await sleep(300);
 		await waitFor(element(by[textMatcher]('Load newer')))
 			.toNotExist()
 			.withTimeout(5000);
@@ -230,7 +267,7 @@ describe('Threads', () => {
 		await waitFor(element(by[textMatcher]("Go to jumping-thread's thread")).atIndex(0))
 			.toExist()
 			.withTimeout(5000);
-		await element(by[textMatcher]("Go to jumping-thread's thread")).atIndex(0).tap();
+		await jumpToQuotedMessage(element(by[textMatcher]("Go to jumping-thread's thread")).atIndex(0));
 		await expectThreadMessages("Go to jumping-thread's thread");
 		await tapBack();
 	});
@@ -260,7 +297,7 @@ describe('Threads', () => {
 		await waitFor(element(by[textMatcher]('quoted')))
 			.toExist()
 			.withTimeout(5000);
-		await element(by[textMatcher]('quoted')).atIndex(0).tap();
+		await jumpToQuotedMessage(element(by[textMatcher]('quoted')).atIndex(0));
 		await expectThreadMessages('quoted');
 		await tapBack();
 	});

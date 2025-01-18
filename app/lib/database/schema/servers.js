@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
-	version: 13,
+	version: 16,
 	tables: [
 		tableSchema({
 			name: 'users',
@@ -19,7 +19,8 @@ export default appSchema({
 				{ name: 'is_from_webview', type: 'boolean', isOptional: true },
 				{ name: 'enable_message_parser_early_adoption', type: 'boolean', isOptional: true },
 				{ name: 'nickname', type: 'string', isOptional: true },
-				{ name: 'bio', type: 'string', isOptional: true }
+				{ name: 'bio', type: 'string', isOptional: true },
+				{ name: 'require_password_change', type: 'boolean', isOptional: true }
 			]
 		}),
 		tableSchema({
@@ -38,7 +39,10 @@ export default appSchema({
 				{ name: 'biometry', type: 'boolean', isOptional: true }, // deprecated
 				{ name: 'unique_id', type: 'string', isOptional: true },
 				{ name: 'enterprise_modules', type: 'string', isOptional: true },
-				{ name: 'e2e_enable', type: 'boolean', isOptional: true }
+				{ name: 'e2e_enable', type: 'boolean', isOptional: true },
+				{ name: 'supported_versions', type: 'string', isOptional: true },
+				{ name: 'supported_versions_warning_at', type: 'number', isOptional: true },
+				{ name: 'supported_versions_updated_at', type: 'number', isOptional: true }
 			]
 		}),
 		tableSchema({
