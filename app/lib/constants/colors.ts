@@ -1,4 +1,5 @@
 const backdropColor = '#000000';
+const overlayBackground = 'rgba(31, 35, 41, 0.65)';
 
 const light = {
 	surfaceLight: '#FFFFFF',
@@ -152,7 +153,7 @@ const dark = {
 	userPresenceOffline: '#6C727A',
 	userPresenceDisabled: '#955828',
 
-	buttonBackgroundPrimaryDefault: '#3976D1',
+	buttonBackgroundPrimaryDefault: '#095AD2',
 	buttonBackgroundPrimaryPress: '#245399',
 	buttonBackgroundPrimaryDisabled: '#1D3963',
 
@@ -280,18 +281,21 @@ export const colors = {
 	light: {
 		...light,
 		backdropColor,
+		overlayBackground,
 		backdropOpacity: 0.3,
 		attachmentLoadingOpacity: 0.7
 	},
 	dark: {
 		...dark,
 		backdropColor,
+		overlayBackground,
 		backdropOpacity: 0.9,
 		attachmentLoadingOpacity: 0.3
 	},
 	black: {
 		...black,
 		backdropColor,
+		overlayBackground,
 		backdropOpacity: 0.9,
 		attachmentLoadingOpacity: 0.3
 	}
