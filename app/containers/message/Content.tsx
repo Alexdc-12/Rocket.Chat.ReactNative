@@ -45,14 +45,13 @@ const Content = React.memo(
 			content = (
 				<Text
 					style={[styles.textInfo, { color: themes[theme].fontSecondaryInfo }]}
-					accessibilityLabel={I18n.t('Encrypted_message')}
-				>
+					accessibilityLabel={I18n.t('Encrypted_message')}>
 					{I18n.t('Encrypted_message')}
 				</Text>
 			);
 		} else if (isPreview) {
 			content = <MarkdownPreview msg={props.msg} />;
-		} else {
+		} else if (props.msg) {
 			content = (
 				<Markdown
 					msg={props.msg}
@@ -65,7 +64,6 @@ const Content = React.memo(
 					navToRoomInfo={props.navToRoomInfo}
 					tmid={props.tmid}
 					useRealName={props.useRealName}
-					theme={theme}
 					onLinkPress={onLinkPress}
 					isTranslated={props.isTranslated}
 				/>
@@ -76,7 +74,7 @@ const Content = React.memo(
 			content = <Text style={[styles.textInfo, { color: themes[theme].fontSecondaryInfo }]}>{I18n.t('Message_Ignored')}</Text>;
 		}
 
-		return <View style={props.isTemp && styles.temp}>{content}</View>;
+		return content ? <View style={props.isTemp && styles.temp}>{content}</View> : null;
 	},
 	(prevProps, nextProps) => {
 		if (prevProps.isTemp !== nextProps.isTemp) {

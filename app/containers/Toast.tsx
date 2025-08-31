@@ -33,7 +33,9 @@ const Toast = (): React.ReactElement => {
 		};
 	}, []);
 
-	const getToastRef = (newToast: EasyToast | null) => (toast = newToast);
+	const getToastRef = (newToast: EasyToast | null) => {
+		toast = newToast;
+	};
 
 	const showToast = ({ message }: { message: string }) => {
 		if (toast && toast.show) {
@@ -46,7 +48,7 @@ const Toast = (): React.ReactElement => {
 			ref={getToastRef}
 			position='center'
 			style={[styles.toast, { backgroundColor: colors.surfaceDark }]}
-			textStyle={[styles.text, { color: theme === "light" ? colors.fontWhite : colors.fontPureBlack }]}
+			textStyle={[styles.text, { color: theme === 'light' ? colors.fontWhite : colors.fontPureBlack }]}
 			opacity={0.9}
 		/>
 	);

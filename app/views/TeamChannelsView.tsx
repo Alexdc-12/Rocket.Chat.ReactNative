@@ -1,26 +1,25 @@
 import { Q } from '@nozbe/watermelondb';
 import { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import React from 'react';
-import { Alert, FlatList, Keyboard } from 'react-native';
+import { Alert, FlatList, Keyboard, PixelRatio } from 'react-native';
 import { connect } from 'react-redux';
 
 import { deleteRoom } from '../actions/room';
-import { DisplayMode, themes } from '../lib/constants';
+import { DisplayMode, textInputDebounceTime, themes } from '../lib/constants';
 import { TActionSheetOptions, TActionSheetOptionsItem, withActionSheet } from '../containers/ActionSheet';
 import ActivityIndicator from '../containers/ActivityIndicator';
 import BackgroundContainer from '../containers/BackgroundContainer';
-import * as HeaderButton from '../containers/HeaderButton';
+import * as HeaderButton from '../containers/Header/components/HeaderButton';
 import RoomHeader from '../containers/RoomHeader';
 import SafeAreaView from '../containers/SafeAreaView';
 import SearchHeader from '../containers/SearchHeader';
-import StatusBar from '../containers/StatusBar';
 import { IApplicationState, IBaseScreen, TSubscriptionModel } from '../definitions';
 import { ERoomType } from '../definitions/ERoomType';
 import { withDimensions } from '../dimensions';
 import I18n from '../i18n';
 import database from '../lib/database';
 import { CustomIcon } from '../containers/CustomIcon';
-import RoomItem, { ROW_HEIGHT } from '../containers/RoomItem';
+import RoomItem from '../containers/RoomItem';
 import { ChatsStackParamList } from '../stacks/types';
 import { withTheme } from '../theme';
 import { goRoom } from '../lib/methods/helpers/goRoom';
@@ -31,11 +30,14 @@ import { Services } from '../lib/services';
 
 const API_FETCH_COUNT = 25;
 
-const getItemLayout = (data: ArrayLike<IItem> | null | undefined, index: number) => ({
-	length: data?.length || 0,
-	offset: ROW_HEIGHT * index,
-	index
-});
+const getItemLayout = (data: ArrayLike<IItem> | null | undefined, index: number) => {
+	const rowHeight = 75 * PixelRatio.getFontScale();
+	return {
+		length: data?.length || 0,
+		offset: rowHeight * index,
+		index
+	};
+};
 const keyExtractor = (item: IItem) => item._id;
 
 export interface IItem {
@@ -230,13 +232,13 @@ class TeamChannelsView extends React.Component<ITeamChannelsViewProps, ITeamChan
 				headerTitle: () => (
 					<SearchHeader onSearchChangeText={this.onSearchChangeText} testID='team-channels-view-search-header' />
 				),
-				headerRight: () => null
+				headerRight: undefined
 			};
 			return navigation.setOptions(options);
 		}
 
 		const options: NativeStackNavigationOptions = {
-			headerLeft: () => null,
+			headerLeft: undefined,
 			headerTitle: () => (
 				<RoomHeader title={getRoomTitle(team)} subtitle={team.topic} type={team.t} onPress={this.goRoomActionsView} teamMain />
 			),
@@ -279,7 +281,7 @@ class TeamChannelsView extends React.Component<ITeamChannelsViewProps, ITeamChan
 				}
 			}
 		);
-	}, 300);
+	}, textInputDebounceTime);
 
 	onCancelSearchPress = () => {
 		logEvent(events.TC_CANCEL_SEARCH);
@@ -345,7 +347,7 @@ class TeamChannelsView extends React.Component<ITeamChannelsViewProps, ITeamChan
 						teamId: result.room.teamId
 					};
 				}
-				goRoom({ item: params, isMasterDetail, popToRoot: !!isMasterDetail });
+				goRoom({ item: params, isMasterDetail });
 			} catch (e: any) {
 				if (e.data.error === 'not-allowed') {
 					showErrorAlert(I18n.t('error-not-allowed'));
@@ -568,12 +570,7 @@ class TeamChannelsView extends React.Component<ITeamChannelsViewProps, ITeamChan
 
 	render() {
 		console.count(`${this.constructor.name}.render calls`);
-		return (
-			<SafeAreaView testID='team-channels-view'>
-				<StatusBar />
-				{this.renderScroll()}
-			</SafeAreaView>
-		);
+		return <SafeAreaView testID='team-channels-view'>{this.renderScroll()}</SafeAreaView>;
 	}
 }
 

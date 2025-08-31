@@ -24,12 +24,12 @@ interface IListHeader {
 	numberOfLines?: number;
 }
 
-const ListHeader = React.memo(({ title, translateTitle = true, numberOfLines = 1 }: IListHeader) => {
+const ListHeader = React.memo(({ title, translateTitle = true, numberOfLines }: IListHeader) => {
 	const { theme } = useTheme();
 
 	return (
 		<View style={styles.container}>
-			<Text style={[styles.title, { color: themes[theme].fontHint }]} numberOfLines={numberOfLines}>
+			<Text accessibilityRole='header' style={[styles.title, { color: themes[theme].fontHint }]} numberOfLines={numberOfLines}>
 				{translateTitle ? I18n.t(title) : title}
 			</Text>
 		</View>
