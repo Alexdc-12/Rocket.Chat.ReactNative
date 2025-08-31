@@ -98,8 +98,14 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 		}
 	}
 
+	componentDidUpdate(prevProps: Readonly<INewServerViewProps>) {
+		if (prevProps.connecting !== this.props.connecting) {
+			this.setHeader();
+		}
+	}
+
 	setHeader = () => {
-		const { previousServer, navigation } = this.props;
+		const { previousServer, navigation, connecting } = this.props;
 		if (previousServer) {
 			return navigation.setOptions({
 				headerTitle: I18n.t('Add_server'),
@@ -155,6 +161,7 @@ class NewServerView extends React.Component<INewServerViewProps, INewServerViewS
 
 	close = async () => {
 		const { dispatch, previousServer } = this.props;
+
 		dispatch(inviteLinksClear());
 		if (previousServer) {
 			const serverRecord = await getServerById(previousServer);
