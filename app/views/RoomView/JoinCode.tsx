@@ -84,13 +84,17 @@ const JoinCode = React.memo(
 							styles.content,
 							isMasterDetail && [sharedStyles.modalFormSheet, styles.tablet],
 							{ backgroundColor: themes[theme].surfaceRoom }
-						]}
-					>
+						]}>
 						<Text style={[styles.title, { color: themes[theme].fontTitlesLabels }]}>{I18n.t('Insert_Join_Code')}</Text>
 						<FormTextInput
 							value={code}
-							// TODO: find a way to type this ref
-							inputRef={(e: any) => InteractionManager.runAfterInteractions(() => e?.getNativeRef()?.focus())}
+							inputRef={(e: any) => {
+								if (e) {
+									InteractionManager.runAfterInteractions(() => {
+										e.focus();
+									});
+								}
+							}}
 							returnKeyType='send'
 							autoCapitalize='none'
 							onChangeText={setCode}

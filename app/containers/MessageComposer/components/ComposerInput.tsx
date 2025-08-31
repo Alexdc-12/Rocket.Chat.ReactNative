@@ -4,11 +4,12 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useDispatch } from 'react-redux';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
 
+import { textInputDebounceTime } from '../../../lib/constants';
 import I18n from '../../../i18n';
 import { IAutocompleteItemProps, IComposerInput, IComposerInputProps, IInputSelection, TSetInput } from '../interfaces';
 import { useAutocompleteParams, useFocused, useMessageComposerApi, useMicOrSend } from '../context';
 import { fetchIsAllOrHere, getMentionRegexp } from '../helpers';
-import { useSubscription, useAutoSaveDraft } from '../hooks';
+import { useAutoSaveDraft } from '../hooks';
 import sharedStyles from '../../../views/Styles';
 import { useTheme } from '../../../theme';
 import { userTyping } from '../../../actions/room';
@@ -37,19 +38,18 @@ const defaultSelection: IInputSelection = { start: 0, end: 0 };
 export const ComposerInput = memo(
 	forwardRef<IComposerInput, IComposerInputProps>(({ inputRef }, ref) => {
 		const { colors, theme } = useTheme();
-		const { rid, tmid, sharing, action, selectedMessages, setQuotesAndText } = useRoomContext();
+		const { rid, tmid, sharing, action, selectedMessages, setQuotesAndText, room } = useRoomContext();
 		const focused = useFocused();
 		const { setFocused, setMicOrSend, setAutocompleteParams } = useMessageComposerApi();
 		const autocompleteType = useAutocompleteParams()?.type;
 		const textRef = React.useRef('');
-		const firstRender = React.useRef(false);
+		const firstRender = React.useRef(true);
 		const selectionRef = React.useRef<IInputSelection>(defaultSelection);
 		const dispatch = useDispatch();
-		const subscription = useSubscription(rid);
 		const isMasterDetail = useAppSelector(state => state.app.isMasterDetail);
 		let placeholder = tmid ? I18n.t('Add_thread_reply') : '';
-		if (subscription && !tmid) {
-			placeholder = I18n.t('Message_roomname', { roomName: (subscription.t === 'd' ? '@' : '#') + getRoomTitle(subscription) });
+		if (room && !tmid) {
+			placeholder = I18n.t('Message_roomname', { roomName: (room.t === 'd' ? '@' : '#') + getRoomTitle(room) });
 			if (!isTablet && placeholder.length > COMPOSER_INPUT_PLACEHOLDER_MAX_LENGTH) {
 				placeholder = `${placeholder.slice(0, COMPOSER_INPUT_PLACEHOLDER_MAX_LENGTH)}...`;
 			}
@@ -76,20 +76,20 @@ export const ComposerInput = memo(
 				}
 			};
 
-			if (sharing) return;
-			if (usedCannedResponse) setInput(usedCannedResponse);
-			if (action !== 'edit' && !firstRender.current) {
-				firstRender.current = true;
+			if (action !== 'edit' && firstRender.current) {
+				firstRender.current = false;
 				setDraftMessage();
 			}
-		}, [action, rid, tmid, usedCannedResponse, firstRender.current]);
+			if (sharing) return;
+			if (usedCannedResponse) setInput(usedCannedResponse);
+		}, [action, rid, tmid, usedCannedResponse]);
 
 		// Edit/quote
 		useEffect(() => {
 			const fetchMessageAndSetInput = async () => {
 				const message = await getMessageById(selectedMessages[0]);
 				if (message) {
-					setInput(message?.msg || '');
+					setInput(message?.msg || message?.attachments?.[0]?.description || '');
 				}
 			};
 
@@ -150,7 +150,8 @@ export const ComposerInput = memo(
 			getText: () => textRef.current,
 			getSelection: () => selectionRef.current,
 			setInput,
-			onAutocompleteItemSelected
+			onAutocompleteItemSelected,
+			focus
 		}));
 
 		const setInput: TSetInput = (text, selection, forceUpdateDraftMessage) => {
@@ -331,13 +332,13 @@ export const ComposerInput = memo(
 				setAutocompleteParams({ text: autocompleteText, type: ':' });
 				return;
 			}
-			if (lastWord.match(/^!/) && subscription?.t === 'l') {
+			if (lastWord.match(/^!/) && room?.t === 'l') {
 				setAutocompleteParams({ text: autocompleteText, type: '!' });
 				return;
 			}
 
 			stopAutocomplete();
-		}, 300);
+		}, textInputDebounceTime);
 
 		const handleTyping = (isTyping: boolean) => {
 			if (sharing || !rid) return;
@@ -349,7 +350,9 @@ export const ComposerInput = memo(
 				style={[styles.textInput, { color: colors.fontDefault }]}
 				placeholder={placeholder}
 				placeholderTextColor={colors.fontAnnotation}
-				ref={component => (inputRef.current = component)}
+				ref={component => {
+					inputRef.current = component;
+				}}
 				blurOnSubmit={false}
 				onChangeText={onChangeText}
 				onSelectionChange={onSelectionChange}
@@ -358,6 +361,7 @@ export const ComposerInput = memo(
 				underlineColorAndroid='transparent'
 				defaultValue=''
 				multiline
+				{...(autocompleteType ? { autoComplete: 'off', autoCorrect: false, autoCapitalize: 'none' } : {})}
 				keyboardAppearance={theme === 'light' ? 'light' : 'dark'}
 				// eslint-disable-next-line no-nested-ternary
 				testID={`message-composer-input${tmid ? '-thread' : sharing ? '-share' : ''}`}
