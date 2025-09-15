@@ -1,6 +1,7 @@
 import {
 	IAvatarSuggestion,
 	IMessage,
+	IMessagePreferences,
 	INotificationPreferences,
 	IPreviewItem,
 	IProfileParams,
@@ -17,7 +18,8 @@ import { TEAM_TYPE } from '../../definitions/ITeam';
 import { OperationParams, ResultFor } from '../../definitions/rest/helpers';
 import { SubscriptionsEndpoints } from '../../definitions/rest/v1/subscriptions';
 import { Encryption } from '../encryption';
-import { RoomTypes, roomTypeToApiType, unsubscribeRooms } from '../methods';
+import { RoomTypes, roomTypeToApiType } from '../methods/roomTypeToApiType';
+import { unsubscribeRooms } from '../methods/subscribeRooms';
 import { compareServerVersion, getBundleId, isIOS } from '../methods/helpers';
 import { getDeviceToken } from '../notifications';
 import { store as reduxStore } from '../store/auxStore';
@@ -626,13 +628,13 @@ export const saveRoomSettings = (
 	sdk.methodCallWrapper('saveRoomSettings', rid, params);
 
 export const saveUserProfile = (
-	data: IProfileParams | Pick<IProfileParams, 'username'>,
+	data: IProfileParams | Pick<IProfileParams, 'username' | 'name'>,
 	customFields?: { [key: string | number]: string }
 ) =>
 	// RC 0.62.2
 	sdk.post('users.updateOwnBasicInfo', { data, customFields });
 
-export const saveUserPreferences = (data: Partial<INotificationPreferences>) =>
+export const saveUserPreferences = (data: Partial<INotificationPreferences & IMessagePreferences>) =>
 	// RC 0.62.0
 	sdk.post('users.setPreferences', { data });
 
@@ -745,6 +747,13 @@ export const getMessages = ({
 	// RC 0.59.0
 	return sdk.get(`${roomTypeToApiType(t)}.messages`, params);
 };
+
+export const getPinnedMessages = ({ roomId, offset, count }: { roomId: string; offset: number; count: number }) =>
+	sdk.get('chat.getPinnedMessages', {
+		roomId,
+		offset,
+		count
+	});
 
 export const getReadReceipts = (messageId: string) =>
 	// RC 0.63.0
@@ -929,12 +938,12 @@ export const emitTyping = (room: IRoom, typing = true) => {
 	return sdk.methodCall('stream-notify-room', `${room}/typing`, name, typing);
 };
 
-export function e2eResetOwnKey(): Promise<boolean | {}> {
+export function e2eResetOwnKey(): Promise<{ success?: boolean }> {
 	// {} when TOTP is enabled
 	unsubscribeRooms();
 
-	// RC 0.72.0
-	return sdk.methodCallWrapper('e2e.resetOwnE2EKey');
+	// RC 3.6.0
+	return sdk.post('users.resetE2EKey');
 }
 
 export function e2eResetRoomKey(rid: string, e2eKey: string, e2eKeyId: string): Promise<boolean | {}> {

@@ -2,9 +2,11 @@ import React from 'react';
 import { Dimensions, EmitterSubscription, Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import RNScreens from 'react-native-screens';
+import { enableScreens } from 'react-native-screens';
 import { Provider } from 'react-redux';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
+import ResponsiveLayoutProvider from './lib/hooks/useResponsiveLayout/useResponsiveLayout';
 import AppContainer from './AppContainer';
 import { appInit, appInitLocalSettings, setMasterDetail as setMasterDetailAction } from './actions/app';
 import { deepLinkingOpen } from './actions/deepLinking';
@@ -15,7 +17,7 @@ import Toast from './containers/Toast';
 import TwoFactor from './containers/TwoFactor';
 import { IThemePreference } from './definitions/ITheme';
 import { DimensionsContext } from './dimensions';
-import { MIN_WIDTH_MASTER_DETAIL_LAYOUT, colors, isFDroidBuild, themes } from './lib/constants';
+import { MIN_WIDTH_MASTER_DETAIL_LAYOUT, colors, themes } from './lib/constants';
 import { getAllowAnalyticsEvents, getAllowCrashReport } from './lib/methods';
 import { debounce, isTablet } from './lib/methods/helpers';
 import { toggleAnalyticsEventsReport, toggleCrashErrorsReport } from './lib/methods/helpers/log';
@@ -35,8 +37,9 @@ import { initStore } from './lib/store/auxStore';
 import { TSupportedThemes, ThemeContext } from './theme';
 import ChangePasscodeView from './views/ChangePasscodeView';
 import ScreenLockedView from './views/ScreenLockedView';
+import StatusBar from './containers/StatusBar';
 
-RNScreens.enableScreens();
+enableScreens();
 initStore(store);
 
 interface IDimensions {
@@ -85,9 +88,7 @@ export default class Root extends React.Component<{}, IState> {
 	constructor(props: any) {
 		super(props);
 		this.init();
-		if (!isFDroidBuild) {
-			this.initCrashReport();
-		}
+		this.initCrashReport();
 		const { width, height, scale, fontScale } = Dimensions.get('window');
 		const theme = initialTheme();
 		this.state = {
@@ -129,6 +130,9 @@ export default class Root extends React.Component<{}, IState> {
 		// Open app from push notification
 		const notification = await initializePushNotifications();
 		if (notification) {
+			if ('configured' in notification) {
+				return;
+			}
 			onNotification(notification);
 			return;
 		}
@@ -212,26 +216,31 @@ export default class Root extends React.Component<{}, IState> {
 							setTheme: this.setTheme,
 							colors: colors[theme]
 						}}>
-						<DimensionsContext.Provider
-							value={{
-								width,
-								height,
-								scale,
-								fontScale,
-								setDimensions: this.setDimensions
-							}}>
-							<GestureHandlerRootView>
-								<ActionSheetProvider>
-									<AppContainer />
-									<TwoFactor />
-									<ScreenLockedView />
-									<ChangePasscodeView />
-									<InAppNotification />
-									<Toast />
-									<Loading />
-								</ActionSheetProvider>
-							</GestureHandlerRootView>
-						</DimensionsContext.Provider>
+						<ResponsiveLayoutProvider>
+							<DimensionsContext.Provider
+								value={{
+									width,
+									height,
+									scale,
+									fontScale,
+									setDimensions: this.setDimensions
+								}}>
+								<GestureHandlerRootView>
+									<KeyboardProvider>
+										<ActionSheetProvider>
+											<StatusBar />
+											<AppContainer />
+											<TwoFactor />
+											<ScreenLockedView />
+											<ChangePasscodeView />
+											<InAppNotification />
+											<Toast />
+											<Loading />
+										</ActionSheetProvider>
+									</KeyboardProvider>
+								</GestureHandlerRootView>
+							</DimensionsContext.Provider>
+						</ResponsiveLayoutProvider>
 					</ThemeContext.Provider>
 				</Provider>
 			</SafeAreaProvider>

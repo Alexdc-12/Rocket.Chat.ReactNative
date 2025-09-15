@@ -1,8 +1,9 @@
-import React, { ReactElement, useContext, useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import React, { ReactElement, useContext, useEffect, useLayoutEffect, useState } from 'react';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import FastImage from 'react-native-fast-image';
+import { Image } from 'expo-image';
 import { dequal } from 'dequal';
+import axios from 'axios';
 
 import { useAppSelector } from '../../lib/hooks';
 import Touchable from './Touchable';
@@ -10,24 +11,22 @@ import openLink from '../../lib/methods/helpers/openLink';
 import sharedStyles from '../../views/Styles';
 import { useTheme } from '../../theme';
 import { LISTENER } from '../Toast';
-import { isAndroid } from '../../lib/methods/helpers';
 import EventEmitter from '../../lib/methods/helpers/events';
 import I18n from '../../i18n';
 import MessageContext from './Context';
 import { IUrl } from '../../definitions';
-import { WidthAwareContext, WidthAwareView } from './Components/WidthAwareView';
+import { WidthAwareContext } from './Components/WidthAwareView';
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		flexDirection: 'column',
-		marginTop: 4,
 		gap: 4
 	},
 	textContainer: {
 		flex: 1,
 		flexDirection: 'column',
-		padding: 15,
+		padding: 12,
 		justifyContent: 'flex-start',
 		alignItems: 'flex-start'
 	},
@@ -40,9 +39,8 @@ const styles = StyleSheet.create({
 		...sharedStyles.textRegular
 	},
 	loading: {
-		height: 0,
-		borderWidth: 0,
-		marginTop: 0
+		flex: 1,
+		height: 150
 	}
 });
 
@@ -51,7 +49,7 @@ const UrlContent = ({ title, description }: { title: string; description: string
 	return (
 		<View style={styles.textContainer}>
 			{title ? (
-				<Text style={[styles.title, { color: colors.badgeBackgroundLevel2 }]} numberOfLines={2}>
+				<Text style={[styles.title, { color: colors.fontInfo }]} numberOfLines={2}>
 					{title}
 				</Text>
 			) : null}
@@ -65,79 +63,89 @@ const UrlContent = ({ title, description }: { title: string; description: string
 };
 const UrlImage = ({ image, hasContent }: { image: string; hasContent: boolean }) => {
 	const { colors } = useTheme();
-	const [imageLoadedState, setImageLoadedState] = useState<TImageLoadedState>('loading');
 	const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 	const maxSize = useContext(WidthAwareContext);
 
-	useEffect(() => {
-		if (image) {
-			Image.getSize(
-				image,
-				(width, height) => {
-					setImageDimensions({ width, height });
+	useLayoutEffect(() => {
+		if (image && maxSize) {
+			Image.loadAsync(image, {
+				onError: () => {
+					setImageDimensions({ width: -1, height: -1 });
 				},
-				() => {
-					setImageLoadedState('error');
-				}
-			);
+				maxWidth: maxSize
+			}).then(image => {
+				setImageDimensions({ width: image.width, height: image.height });
+			});
 		}
-	}, [image]);
+	}, [image, maxSize]);
 
-	let imageStyle = {};
-	let containerStyle: ViewStyle = {};
+	if (!imageDimensions.width || !imageDimensions.height) {
+		return <View style={styles.loading} />;
+	}
+	if (imageDimensions.width === -1) {
+		return null;
+	}
 
-	if (imageLoadedState === 'done') {
-		const width = Math.min(imageDimensions.width, maxSize) || 0;
-		const height = Math.min((imageDimensions.height * ((width * 100) / imageDimensions.width)) / 100, maxSize) || 0;
-		imageStyle = {
-			width,
-			height
-		};
+	const width = Math.min(imageDimensions.width, maxSize) || 0;
+	const height = Math.min((imageDimensions.height * ((width * 100) / imageDimensions.width)) / 100, maxSize) || 0;
+	const imageStyle = {
+		width,
+		height
+	};
+	let containerStyle: ViewStyle = {
+		overflow: 'hidden',
+		alignItems: 'center',
+		justifyContent: 'center',
+		...(imageDimensions.width <= 64 && { width: 64 }),
+		...(imageDimensions.height <= 64 && { height: 64 })
+	};
+	if (!hasContent) {
 		containerStyle = {
-			overflow: 'hidden',
-			alignItems: 'center',
-			justifyContent: 'center',
-			...imageDimensions.width <= 64 && { width: 64 },
-			...imageDimensions.height <= 64 && { height: 64 }
+			...containerStyle,
+			borderColor: colors.strokeLight,
+			borderWidth: 1,
+			borderRadius: 4
 		};
-		if (!hasContent) {
-			containerStyle = {
-				...containerStyle,
-				borderColor: colors.strokeLight,
-				borderWidth: 1,
-				borderRadius: 4
-			};
-		}
 	}
 
 	return (
 		<View style={containerStyle}>
-			<FastImage
-				fallback={isAndroid}
-				source={{ uri: image }}
-				style={[imageStyle, imageLoadedState === 'loading' && styles.loading]}
-				resizeMode={FastImage.resizeMode.contain}
-				onError={() => setImageLoadedState('error')}
-				onLoad={() => setImageLoadedState('done')}
-			/>
+			<Image source={{ uri: image }} style={imageStyle} contentFit='contain' />
 		</View>
 	);
 };
-
-type TImageLoadedState = 'loading' | 'done' | 'error';
 
 const Url = ({ url }: { url: IUrl }) => {
 	const { colors, theme } = useTheme();
 	const { baseUrl, user } = useContext(MessageContext);
 	const API_Embed = useAppSelector(state => state.settings.API_Embed);
-	const getImageUrl = () => {
-		const imageUrl = url.image || url.url;
+	const [imageUrl, setImageUrl] = useState(url.image);
 
-		if (!imageUrl) return null;
-		if (imageUrl.includes('http')) return imageUrl;
-		return `${baseUrl}/${imageUrl}?rc_uid=${user.id}&rc_token=${user.token}`;
+	useEffect(() => {
+		const verifyUrlIsImage = async () => {
+			try {
+				const imageUrl = getImageUrl();
+				if (!imageUrl || !API_Embed) return;
+
+				const response = await axios.head(imageUrl);
+				const contentType = response.headers['content-type'];
+				if (contentType?.startsWith?.('image/')) {
+					setImageUrl(imageUrl);
+				}
+			} catch {
+				// do nothing
+			}
+		};
+		verifyUrlIsImage();
+	}, [url.image, url.url, API_Embed]);
+
+	const getImageUrl = () => {
+		const _imageUrl = url.image || url.url;
+
+		if (!_imageUrl) return null;
+		if (_imageUrl.includes('http')) return _imageUrl;
+		return `${baseUrl}/${_imageUrl}?rc_uid=${user.id}&rc_token=${user.token}`;
 	};
-	const image = getImageUrl();
 
 	const onPress = () => openLink(url.url, theme);
 
@@ -168,11 +176,7 @@ const Url = ({ url }: { url: IUrl }) => {
 			]}
 			background={Touchable.Ripple(colors.surfaceNeutral)}>
 			<>
-				{image ? (
-					<WidthAwareView>
-						<UrlImage image={image} hasContent={hasContent} />
-					</WidthAwareView>
-				) : null}
+				{imageUrl ? <UrlImage image={imageUrl} hasContent={hasContent} /> : null}
 				{hasContent ? <UrlContent title={url.title} description={url.description} /> : null}
 			</>
 		</Touchable>

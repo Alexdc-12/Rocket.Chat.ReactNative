@@ -156,10 +156,6 @@ export type ModalStackParamList = {
 		teamId: string;
 		joined: boolean;
 	};
-	MarkdownTableView: {
-		renderRows: Function;
-		tableWidth: number;
-	};
 	ReadReceiptsView: {
 		messageId: string;
 	};
@@ -170,6 +166,7 @@ export type ModalStackParamList = {
 	ScreenLockConfigView: undefined;
 	StatusView: undefined;
 	ProfileView: undefined;
+	ChangePasswordView: undefined;
 	DisplayPrefsView: undefined;
 	AdminPanelView: undefined;
 	NewMessageView: undefined;
@@ -209,6 +206,7 @@ export type ModalStackParamList = {
 		userId: string;
 		name: string;
 	};
+	AccessibilityAndAppearanceView: undefined;
 };
 
 export type MasterDetailInsideStackParamList = {
